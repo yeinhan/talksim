@@ -184,6 +184,27 @@ th { font-weight: 400; color: var(--muted); font-size: 12px; }
 .overlay { position: fixed; inset: 0; background: rgba(20, 10, 20, .7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 20; }
 .overlay img { max-height: 75vh; border-radius: 16px; }
 .overlay p { color: #fff; font-size: 14px; }
+.loader { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.loader-box { width: 100%; max-width: 320px; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px 22px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; box-shadow: 0 12px 40px rgba(60, 20, 50, .15); }
+.loader-heart { width: 56px; height: 56px; fill: var(--pink); }
+.loader-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; align-self: stretch; text-align: left; font-size: 14px; }
+.loader-steps li { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.loader-steps li::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 99px; border: 2px solid var(--line); box-sizing: border-box; }
+.loader-steps li.active { color: var(--ink); font-weight: 700; }
+.loader-steps li.active::before { border-color: var(--pink); border-top-color: transparent; }
+.loader-steps li.done { color: var(--ink); }
+.loader-steps li.done::before { background: var(--teal); border-color: var(--teal); }
+.loader-bar { align-self: stretch; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.loader-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--pink); transition: width .35s ease; }
+#loader-detail { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .loader-heart { animation: beat 1s ease-in-out infinite; }
+  @keyframes beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(.96); } 45% { transform: scale(1.1); } }
+  .loader-steps li.active::before { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+}
 footer { font-size: 12px; color: var(--muted); text-align: center; }
 @media (prefers-reduced-motion: no-preference) { .bar i, .hours i { transition: width .5s ease, height .5s ease; } }
 </style>
@@ -232,6 +253,21 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 
   <footer>톡심 측정기는 카카오와 관련 없는 개인 프로젝트예요. · 재미로만 봐주세요 · <a href="privacy.html" style="color:inherit">개인정보처리방침</a></footer>
 </main>
+
+<div id="loader" class="loader" role="alertdialog" aria-modal="true" aria-labelledby="loader-title" hidden>
+  <div class="loader-box">
+    <svg class="loader-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.5 5c2 0 3.5 1.1 4.3 2.6h2.4C14 6.1 15.5 5 17.5 5 21 5 23.1 8.4 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>
+    <h2 id="loader-title">톡심 측정 중</h2>
+    <ol class="loader-steps">
+      <li data-step="read">대화 파일 여는 중</li>
+      <li data-step="parse">메시지 읽는 중</li>
+      <li data-step="stats">선톡·답장·단어 세는 중</li>
+      <li data-step="done">결과지 만드는 중</li>
+    </ol>
+    <div class="loader-bar"><i id="loader-fill"></i></div>
+    <p class="small" id="loader-detail">대화는 이 휴대폰 밖으로 나가지 않아요</p>
+  </div>
+</div>
 
 <div id="overlay" class="overlay" hidden>
   <img id="shot" alt="결과 카드 이미지">
@@ -696,23 +732,60 @@ async function readFile(file) {
   return file.text();
 }
 
+// ---- 분석 중 화면 ----
+const STEPS = ["read", "parse", "stats", "done"];
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+function loaderStep(step, detail) {
+  const k = STEPS.indexOf(step);
+  document.querySelectorAll(".loader-steps li").forEach((li, n) => {
+    li.classList.toggle("done", n < k);
+    li.classList.toggle("active", n === k);
+  });
+  $("#loader-fill").style.width = `${((k + 1) / STEPS.length) * 100}%`;
+  if (detail) $("#loader-detail").textContent = detail;
+}
+function showLoader() {
+  $("#loader-detail").textContent = "대화는 이 휴대폰 밖으로 나가지 않아요";
+  $("#loader").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+function hideLoader() {
+  $("#loader").hidden = true;
+  document.body.style.overflow = "";
+}
+
 $("#file").addEventListener("change", async (e) => {
   const file = e.target.files[0];
+  e.target.value = "";
   if (!file) return;
-  showNotice("분석하고 있어요...");
+  const started = Date.now();
+  showLoader();
   try {
+    loaderStep("read", `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+    await nextFrame();
     const text = await readFile(file);
+    loaderStep("parse");
+    await nextFrame();
     const parsed = parseKakao(text);
     if (parsed.messages.length < 2) {
-      showNotice("대화를 찾지 못했어요. 카카오톡 '대화 내용 내보내기'로 받은 텍스트 파일인지 확인해주세요.", true);
+      hideLoader();
+      showNotice("대화를 찾지 못했어요. 카카오톡 '대화 내용 내보내기'로 받은 파일인지 확인해주세요.", true);
       $("#howto").open = true;
       return;
     }
-    showNotice(`메시지 ${parsed.messages.length.toLocaleString()}개를 분석했어요.`);
+    loaderStep("stats", `메시지 ${parsed.messages.length.toLocaleString()}개를 세고 있어요`);
+    await nextFrame();
     if (location.hash) history.replaceState(null, "", location.pathname);
     render(parsed, false);
+    loaderStep("done");
+    // 너무 빨리 사라지면 깜빡이는 것처럼 보여서 최소 1.2초는 보여준다.
+    await wait(Math.max(0, 1200 - (Date.now() - started)));
+    hideLoader();
+    showNotice(`메시지 ${parsed.messages.length.toLocaleString()}개를 분석했어요.`);
     $("#result").scrollIntoView({ behavior: "smooth" });
   } catch (err) {
+    hideLoader();
     showNotice(err.message || "파일을 읽지 못했어요.", true);
   }
 });
