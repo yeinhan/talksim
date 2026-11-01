@@ -130,6 +130,8 @@ th:first-child, td:first-child { text-align: left; }
 th { font-weight: 400; color: var(--muted); font-size: 12px; }
 .table-wrap { overflow-x: auto; }
 
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 30; }
 .ad-slot { border: 1.5px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; font-size: 12px; color: var(--muted); }
 
 .overlay { position: fixed; inset: 0; background: rgba(20, 10, 20, .7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 20; }
@@ -170,8 +172,11 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
   </div>
 
   <div id="notice" class="notice" role="status"></div>
+  <div id="toast" class="toast" role="status" hidden></div>
 
   <div id="result"></div>
+
+  <button class="btn share-site" type="button">톡심 측정기 친구에게 알려주기</button>
 
   <div class="ad-slot" aria-hidden="true">광고 자리</div>
 
@@ -181,6 +186,7 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 <div id="overlay" class="overlay" hidden>
   <img id="shot" alt="결과 카드 이미지">
   <p>이미지를 길게 눌러 저장하거나 공유하세요</p>
+  <button class="btn" id="share-shot" type="button" hidden>이미지 공유하기</button>
   <button class="btn ghost" id="close-shot" type="button" style="color:#fff;border-color:#fff8">닫기</button>
 </div>
 
@@ -229,7 +235,7 @@ function bars(people, key, fmt, cls = "") {
 
 function render(parsed, isSample) {
   const s = computeStats(parsed.messages);
-  current = { parsed, stats: s };
+  current = { parsed, stats: s, isSample };
   const people = s.people.slice(0, 8);
   const top2 = s.people.slice(0, 2);
   const starter = [...s.people].sort((a, b) => b.starts - a.starts)[0];
@@ -254,7 +260,10 @@ function render(parsed, isSample) {
       </div>
       <div class="foot">톡심 측정기</div>
     </div>
-    <button class="btn ghost" id="save" type="button">결과 카드 이미지로 저장</button>
+    <div class="actions">
+      <button class="btn ghost" id="save" type="button">결과 카드 저장</button>
+      <button class="btn ghost share-site" type="button">친구에게 공유</button>
+    </div>
 
     <section class="block">
       <div class="block-head"><h2>누가 먼저 톡했을까</h2><span class="small muted">6시간 넘게 조용하다 보낸 톡 기준</span></div>
@@ -335,12 +344,62 @@ async function saveCard() {
     const bg = getComputedStyle(document.body).backgroundColor;
     const canvas = await html2canvas($("#card"), { backgroundColor: bg, scale: 2 });
     $("#shot").src = canvas.toDataURL("image/png");
+    shotBlob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+    const canShareFile = shotBlob && navigator.canShare && navigator.canShare({ files: [new File([shotBlob], "talksim.png", { type: "image/png" })] });
+    $("#share-shot").hidden = !canShareFile;
     $("#overlay").hidden = false;
   } catch {
     showNotice("이미지를 만들지 못했어요. 화면을 캡처해서 공유해주세요.", true);
   }
-  btn.textContent = "결과 카드 이미지로 저장";
+  btn.textContent = "결과 카드 저장";
 }
+const SITE_URL = "https://yeinhan.github.io/talksim/";
+let shotBlob = null;
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.hidden = true), 2200);
+}
+
+async function copyLink() {
+  try {
+    await navigator.clipboard.writeText(SITE_URL);
+    toast("링크를 복사했어요. 카톡방에 붙여넣어 보세요!");
+  } catch {
+    toast(SITE_URL);
+  }
+}
+
+async function shareSite() {
+  const v = current && !current.isSample ? current.stats.verdict.title : null;
+  const text = v ? `우리 사이 결과: "${v}" 너희는 어때? 톡심 측정기로 확인해봐!` : "우리 카톡 대화 속 진심, 숫자로 확인해봐! 톡심 측정기";
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "톡심 측정기", text, url: SITE_URL });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  copyLink();
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".share-site")) shareSite();
+});
+
+$("#share-shot").addEventListener("click", async () => {
+  if (!shotBlob) return;
+  const file = new File([shotBlob], "talksim.png", { type: "image/png" });
+  try {
+    await navigator.share({ files: [file], title: "톡심 측정기", text: `톡심 측정기 ${SITE_URL}` });
+  } catch (e) {
+    if (!e || e.name !== "AbortError") toast("공유하지 못했어요. 이미지를 길게 눌러 저장해주세요.");
+  }
+});
+
 $("#close-shot").addEventListener("click", () => ($("#overlay").hidden = true));
 
 function showNotice(msg, error = false) {
