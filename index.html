@@ -171,7 +171,12 @@ th:first-child, td:first-child { text-align: left; }
 th { font-weight: 400; color: var(--muted); font-size: 12px; }
 .table-wrap { overflow-x: auto; }
 
-.mask-opt { display: flex; align-items: center; gap: 6px; margin-top: -10px; }
+.mask-opt { display: flex; align-items: center; gap: 6px; }
+.share-opts { display: flex; flex-direction: column; gap: 6px; margin-top: -8px; }
+.share-opts input[type=text] { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+.owner-banner { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--pink-soft); }
+.owner-banner .small { color: var(--pink); letter-spacing: .04em; }
+.owner-banner h2 { font-size: 22px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 30; }
 .ad-slot { border: 1.5px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; font-size: 12px; color: var(--muted); }
@@ -295,83 +300,149 @@ function cardHTML(c) {
     </div>`;
 }
 
-// 결과 요약을 링크(#r=...)에 담는다. 대화 내용은 들어가지 않는다.
-function encodeSummary(c) {
-  const bytes = new TextEncoder().encode(JSON.stringify(c));
+// 결과를 링크(#r=...)에 담는다. 대화 원문은 들어가지 않는다.
+function toB64(bytes) {
   let bin = "";
-  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-function decodeSummary(str) {
+function fromB64(str) {
   const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/"));
-  const c = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (ch) => ch.charCodeAt(0))));
-  if (!c || typeof c.vt !== "string" || !Array.isArray(c.p) || !Array.isArray(c.st) || !Array.isArray(c.fa)) throw new Error("bad");
-  c.p = c.p.slice(0, 2).map(([n, a]) => [String(n).slice(0, 30), Math.max(0, Math.min(100, Number(a) || 0))]);
-  return c;
+  return Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
 }
+async function pipe(bytes, stream) {
+  const out = new Blob([bytes]).stream().pipeThrough(stream);
+  return new Uint8Array(await new Response(out).arrayBuffer());
+}
+async function encodeView(V) {
+  const bytes = new TextEncoder().encode(JSON.stringify(V));
+  if (typeof CompressionStream === "function") {
+    try { return "z" + toB64(await pipe(bytes, new CompressionStream("deflate-raw"))); } catch {}
+  }
+  return "j" + toB64(bytes);
+}
+async function decodeView(str) {
+  const kind = str[0];
+  let bytes = fromB64(str.slice(1));
+  if (kind === "z") bytes = await pipe(bytes, new DecompressionStream("deflate-raw"));
+  else if (kind !== "j") throw new Error("bad");
+  return sanitizeView(JSON.parse(new TextDecoder().decode(bytes)));
+}
+
+// 링크로 들어온 데이터는 믿을 수 없으니 모양과 타입을 다시 맞춘다.
+const str = (x, n = 40) => String(x ?? "").slice(0, n);
+const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+const numOrNull = (x) => (x == null || !Number.isFinite(Number(x)) ? null : Number(x));
+const arr = (x, n) => (Array.isArray(x) ? x.slice(0, n) : []);
+function sanitizeView(V) {
+  if (!V || V.v !== 2 || !V.card) throw new Error("bad");
+  const c = V.card;
+  const wc = (list, n) => arr(list, n).map((w) => ({ word: str(w?.word, 30), count: num(w?.count) }));
+  const fixed = (list, n) => { const a = arr(list, n).map(num); while (a.length < n) a.push(0); return a; };
+  return {
+    v: 2,
+    owner: str(V.owner, 20),
+    card: {
+      tag: str(c.tag), vt: str(c.vt, 60), vd: str(c.vd, 80),
+      p: arr(c.p, 2).map((p) => [str(p?.[0], 30), Math.max(0, Math.min(100, num(p?.[1])))]),
+      st: [str(c.st?.[0], 30), num(c.st?.[1])], fa: [str(c.fa?.[0], 30), numOrNull(c.fa?.[1])], tm: num(c.tm),
+    },
+    first: { date: str(V.first?.date), sender: str(V.first?.sender, 30), text: str(V.first?.text, 80) },
+    people: arr(V.people, 8).map((p) => ({
+      name: str(p?.name, 30), starts: num(p?.starts), medianReplyMinutes: numOrNull(p?.medianReplyMinutes), slowReplies: num(p?.slowReplies),
+      messages: num(p?.messages), laughs: num(p?.laughs), cries: num(p?.cries), emoticons: num(p?.emoticons), photos: num(p?.photos), maxStreak: num(p?.maxStreak),
+      topOpeners: wc(p?.topOpeners, 5), topWords: wc(p?.topWords, 10),
+    })),
+    byHour: fixed(V.byHour, 24),
+    byWeekday: fixed(V.byWeekday, 7),
+    activeDays: num(V.activeDays), longestStreakDays: num(V.longestStreakDays), conversations: num(V.conversations),
+    busiestDays: arr(V.busiestDays, 3).map((d) => ({ day: str(d?.day, 10), count: num(d?.count) })),
+  };
+}
+
 function maskName(n) {
   const chars = [...String(n)];
   return chars.length <= 1 ? "*" : chars[0] + "*".repeat(Math.min(chars.length - 1, 3));
 }
-function maskSummary(c) {
-  const names = new Map();
-  const m = (n) => (n === "-" ? n : (names.has(n) || names.set(n, maskName(n)), names.get(n)));
-  let vt = c.vt, vd = c.vd;
-  for (const n of [...c.p.map((p) => p[0]), c.st[0], c.fa[0]]) {
-    if (n && n !== "-") { vt = vt.split(n).join(m(n)); vd = vd.split(n).join(m(n)); }
-  }
-  return { ...c, vt, vd, p: c.p.map(([n, a]) => [m(n), a]), st: [m(c.st[0]), c.st[1]], fa: [m(c.fa[0]), c.fa[1]] };
+function maskView(V) {
+  const names = [...new Set([...V.people.map((p) => p.name), ...V.card.p.map((p) => p[0]), V.card.st[0], V.card.fa[0], V.first.sender])]
+    .filter((n) => n && n !== "-")
+    .sort((a, b) => b.length - a.length);
+  const m = (n) => (names.includes(n) ? maskName(n) : n);
+  const scrub = (t) => names.reduce((acc, n) => acc.split(n).join(maskName(n)), t);
+  const c = V.card;
+  return {
+    ...V,
+    card: { ...c, vt: scrub(c.vt), vd: scrub(c.vd), p: c.p.map(([n, a]) => [m(n), a]), st: [m(c.st[0]), c.st[1]], fa: [m(c.fa[0]), c.fa[1]] },
+    first: { ...V.first, sender: m(V.first.sender), text: scrub(V.first.text) },
+    people: V.people.map((p) => ({
+      ...p, name: m(p.name),
+      topOpeners: p.topOpeners.map((o) => ({ ...o, word: scrub(o.word) })),
+      topWords: p.topWords.map((w) => ({ ...w, word: scrub(w.word) })),
+    })),
+  };
 }
 
-function renderShared(c) {
-  $("#result").innerHTML = `
-  <div style="display:flex;flex-direction:column;gap:12px">
-    <h2>친구가 보낸 톡심 결과</h2>
-    ${cardHTML(c)}
-    <button class="btn" id="try-mine" type="button">나도 우리 사이 확인하기</button>
-  </div>`;
-  $("#try-mine").addEventListener("click", () => {
-    $(".upload").scrollIntoView({ behavior: "smooth" });
-    $("#howto").open = true;
-  });
-}
-
-function render(parsed, isSample) {
-  const s = computeStats(parsed.messages);
-  current = { parsed, stats: s, isSample };
-  const people = s.people.slice(0, 8);
+// 화면에 그릴 결과 데이터. 링크 공유 시 이 객체가 그대로 담긴다(대화 원문은 없음).
+function buildView(s, isSample) {
   const top2 = s.people.slice(0, 2);
   const starter = [...s.people].sort((a, b) => b.starts - a.starts)[0];
   const fastest = [...s.people].filter((p) => p.medianReplyMinutes != null).sort((a, b) => a.medianReplyMinutes - b.medianReplyMinutes)[0];
-  const peakHour = s.byHour.indexOf(Math.max(...s.byHour));
-  const maxHour = Math.max(...s.byHour, 1);
-  const maxWeek = Math.max(...s.byWeekday, 1);
-  const summary = {
-    tag: isSample ? "예시 결과" : `${fmtDate(s.first.time)} ~ ${fmtDate(s.last.time)}`,
-    vt: s.verdict.title,
-    vd: s.verdict.desc,
-    p: top2.length === 2 ? top2.map((p) => [p.name, p.affection]) : [],
-    st: [starter?.name ?? "-", Math.round((starter?.startShare ?? 0) * 100)],
-    fa: [fastest?.name ?? "-", fastest?.medianReplyMinutes ?? null],
-    tm: s.totalMessages,
+  return {
+    v: 2,
+    card: {
+      tag: isSample ? "예시 결과" : `${fmtDate(s.first.time)} ~ ${fmtDate(s.last.time)}`,
+      vt: s.verdict.title,
+      vd: s.verdict.desc,
+      p: top2.length === 2 ? top2.map((p) => [p.name, p.affection]) : [],
+      st: [starter?.name ?? "-", Math.round((starter?.startShare ?? 0) * 100)],
+      fa: [fastest?.name ?? "-", fastest?.medianReplyMinutes ?? null],
+      tm: s.totalMessages,
+    },
+    first: { date: fmtDate(s.first.time), sender: s.first.sender, text: s.first.text.slice(0, 80) },
+    people: s.people.slice(0, 8).map((p) => ({
+      name: p.name, starts: p.starts, medianReplyMinutes: p.medianReplyMinutes, slowReplies: p.slowReplies,
+      messages: p.messages, laughs: p.laughs, cries: p.cries, emoticons: p.emoticons, photos: p.photos, maxStreak: p.maxStreak,
+      topOpeners: p.topOpeners, topWords: p.topWords,
+    })),
+    byHour: s.byHour,
+    byWeekday: s.byWeekday,
+    activeDays: s.activeDays,
+    longestStreakDays: s.longestStreakDays,
+    conversations: s.conversations,
+    busiestDays: s.busiestDays,
   };
-  current.summary = summary;
+}
+
+function renderView(V, shared) {
+  const people = V.people;
+  const peakHour = V.byHour.indexOf(Math.max(...V.byHour));
+  const maxHour = Math.max(...V.byHour, 1);
+  const maxWeek = Math.max(...V.byWeekday, 1);
 
   $("#result").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
-    ${cardHTML(summary)}
-    <div class="actions">
+    ${shared ? `<div class="owner-banner"><span class="small">공유받은 결과지</span><h2>${V.owner ? `${esc(V.owner)}님의 톡심 결과지입니다` : "친구가 보낸 톡심 결과지입니다"}</h2></div>` : ""}
+    ${cardHTML(V.card)}
+    ${shared
+      ? '<button class="btn" id="try-mine" type="button">나도 우리 사이 확인하기</button>'
+      : `<div class="actions">
       <button class="btn ghost" id="save" type="button">결과 카드 저장</button>
       <button class="btn ghost" id="share-result" type="button">결과 링크 공유</button>
     </div>
-    <label class="small muted mask-opt"><input type="checkbox" id="mask-names"> 공유할 때 이름 가리기</label>
+    <div class="share-opts">
+      <label class="small" for="owner-name">결과지에 표시할 내 이름</label>
+      <input id="owner-name" type="text" maxlength="20" list="owner-list" placeholder="예: 한예인" autocomplete="nickname">
+      <datalist id="owner-list">${people.map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist>
+      <label class="small muted mask-opt"><input type="checkbox" id="mask-names"> 공유할 때 대화 상대 이름 가리기</label>
+    </div>`}
 
     <section class="block">
       <div class="block-head"><h2>누가 먼저 톡했을까</h2><span class="small muted">6시간 넘게 조용하다 보낸 톡 기준</span></div>
       ${bars(people, "starts", (p) => `${p.starts}번`)}
       <div class="pane">
-        <p class="small muted">이 대화의 첫 메시지 · ${fmtDate(s.first.time)}</p>
-        <p class="quote"><b>${esc(s.first.sender)}</b> ${esc(s.first.text.slice(0, 80))}</p>
+        <p class="small muted">이 대화의 첫 메시지 · ${esc(V.first.date)}</p>
+        <p class="quote"><b>${esc(V.first.sender)}</b> ${esc(V.first.text)}</p>
       </div>
       ${people.slice(0, 4).map((p) => `<div class="pane">
         <span class="person-h">${esc(p.name)}의 첫마디 단골</span>
@@ -395,11 +466,11 @@ function render(parsed, isSample) {
         <span class="person-h">${esc(p.name)}</span>
         <div class="chips">${p.topWords.map((w) => `<span class="chip">${esc(w.word)}<b>${w.count}</b></span>`).join("")}</div>
       </div>`).join("")}
-      <div class="pane">
+      ${shared ? "" : `<div class="pane">
         <label class="person-h" for="word">이 단어 몇 번 말했을까?</label>
         <div class="search"><input id="word" type="search" placeholder="예: 보고싶어, 사랑해, 배고파" autocomplete="off"></div>
         <div id="word-result">${bars(people, "_zero", () => "0번")}</div>
-      </div>
+      </div>`}
     </section>
 
     <section class="block">
@@ -413,30 +484,48 @@ function render(parsed, isSample) {
     <section class="block">
       <div class="block-head"><h2>언제 제일 많이 톡할까</h2><span class="small muted">${peakHour}시가 피크</span></div>
       <div class="pane">
-        <div class="hours" role="img" aria-label="시간대별 메시지 수">${s.byHour.map((n, h) => `<i class="${h === peakHour ? "peak" : ""}" style="height:${(n / maxHour) * 100}%" title="${h}시 ${n}개"></i>`).join("")}</div>
+        <div class="hours" role="img" aria-label="시간대별 메시지 수">${V.byHour.map((n, h) => `<i class="${h === peakHour ? "peak" : ""}" style="height:${(n / maxHour) * 100}%" title="${h}시 ${n}개"></i>`).join("")}</div>
         <div class="axis"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>23시</span></div>
       </div>
-      <div class="week">${s.byWeekday.map((n, d) => `<div class="cell" style="opacity:${0.45 + 0.55 * (n / maxWeek)}"><span>${WEEK[d]}</span><b class="num">${n}</b></div>`).join("")}</div>
+      <div class="week">${V.byWeekday.map((n, d) => `<div class="cell" style="opacity:${0.45 + 0.55 * (n / maxWeek)}"><span>${WEEK[d]}</span><b class="num">${n}</b></div>`).join("")}</div>
     </section>
 
     <section class="block">
       <h2>우리의 기록</h2>
       <div class="pane">
-        <p>함께 톡한 날 <b class="num">${s.activeDays}일</b>, 최장 연속 <b class="num">${s.longestStreakDays}일</b></p>
-        <p>대화가 시작된 횟수 <b class="num">${s.conversations}번</b></p>
+        <p>함께 톡한 날 <b class="num">${V.activeDays}일</b>, 최장 연속 <b class="num">${V.longestStreakDays}일</b></p>
+        <p>대화가 시작된 횟수 <b class="num">${V.conversations}번</b></p>
         <p class="small muted">가장 수다스러웠던 날</p>
-        <div class="chips">${s.busiestDays.map((d) => `<span class="chip">${d.day.replace(/-/g, ".")}<b>${d.count}개</b></span>`).join("")}</div>
+        <div class="chips">${V.busiestDays.map((d) => `<span class="chip">${esc(d.day.replace(/-/g, "."))}<b>${d.count}개</b></span>`).join("")}</div>
       </div>
     </section>
+    ${shared ? '<button class="btn" id="try-mine-2" type="button">나도 우리 사이 확인하기</button>' : ""}
   </div>`;
 
+  if (shared) {
+    const go = () => {
+      $(".upload").scrollIntoView({ behavior: "smooth" });
+      $("#howto").open = true;
+    };
+    $("#try-mine").addEventListener("click", go);
+    $("#try-mine-2").addEventListener("click", go);
+    return;
+  }
   $("#save").addEventListener("click", saveCard);
   $("#share-result").addEventListener("click", shareResult);
+  try { $("#owner-name").value = localStorage.getItem("talksim-owner") || ""; } catch {}
   $("#word").addEventListener("input", (e) => {
     const counts = countWord(current.parsed.messages, e.target.value);
     const rows = people.map((p) => ({ name: p.name, n: counts[p.name] || 0 }));
     $("#word-result").innerHTML = bars(rows, "n", (p) => `${p.n}번`);
   });
+}
+
+function render(parsed, isSample) {
+  const s = computeStats(parsed.messages);
+  const view = buildView(s, isSample);
+  current = { parsed, stats: s, isSample, view, summary: view.card };
+  renderView(view, false);
 }
 
 async function saveCard() {
@@ -489,10 +578,13 @@ async function shareSite() {
   copyLink();
 }
 async function shareResult() {
-  if (!current?.summary) return;
-  const c = $("#mask-names")?.checked ? maskSummary(current.summary) : current.summary;
-  const url = `${SITE_URL}#r=${encodeSummary(c)}`;
-  const text = `우리 사이 결과는 "${c.vt}" 너희도 확인해봐!`;
+  if (!current?.view) return;
+  const owner = ($("#owner-name")?.value || "").trim().slice(0, 20);
+  try { localStorage.setItem("talksim-owner", owner); } catch {}
+  const base = $("#mask-names")?.checked ? maskView(current.view) : current.view;
+  const V = { ...base, owner };
+  const url = `${SITE_URL}#r=${await encodeView(V)}`;
+  const text = owner ? `${owner}님의 톡심 결과지: "${V.card.vt}" 너희도 확인해봐!` : `우리 사이 결과는 "${V.card.vt}" 너희도 확인해봐!`;
   if (navigator.share) {
     try {
       await navigator.share({ title: "톡심 측정기 결과", text, url });
@@ -625,18 +717,28 @@ $("#file").addEventListener("change", async (e) => {
   }
 });
 
-let shared = null;
-const m = location.hash.match(/^#r=([A-Za-z0-9_-]+)$/);
-if (m) {
-  try { shared = decodeSummary(m[1]); } catch { shared = null; }
-}
-if (shared) {
-  showNotice("친구가 보낸 결과예요. 내 대화 파일을 올리면 우리 사이도 확인할 수 있어요.");
-  renderShared(shared);
-} else {
+async function start() {
+  const m = location.hash.match(/^#r=([A-Za-z0-9_-]+)$/);
+  if (m) {
+    try {
+      const V = await decodeView(m[1]);
+      // 공유받은 사람은 결과지를 먼저 보고, 아래에서 직접 해볼 수 있게 순서를 바꾼다.
+      $("header").after($("#notice"), $("#result"));
+      $("#howto").open = false;
+      renderView(V, true);
+      document.title = V.owner ? `${V.owner}님의 톡심 결과지 · 톡심 측정기` : "친구의 톡심 결과지 · 톡심 측정기";
+      showNotice("친구가 보낸 결과예요. 내 대화 파일을 올리면 우리 사이도 확인할 수 있어요.");
+      return;
+    } catch {
+      showNotice("결과 링크를 열지 못했어요. 링크가 잘렸거나 이 브라우저가 지원하지 않아요. 대신 예시 결과를 보여드릴게요.", true);
+      render(parseKakao(sampleChat()), true);
+      return;
+    }
+  }
   showNotice("아래는 가상의 두 사람 대화로 만든 예시 결과예요. 내 대화 파일을 올리면 바뀌어요.");
   render(parseKakao(sampleChat()), true);
 }
+start();
 </script>
 
 </body>
