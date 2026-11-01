@@ -458,6 +458,8 @@ const S = {
   choose: (b) => `<div class="phone"><div class="bar"><span>‹ 채팅방 설정</span><span></span></div>
     <div class="body"><div class="list"><span>대화 내용 내보내기</span></div></div><div class="dim"></div>
     <div class="sheet"><div class="list"><span class="hit">텍스트 메시지만 보내기</span><span>${b}</span></div><div class="list"><span>취소</span></div></div></div>`,
+  exportIos: `<div class="phone"><div class="bar"><span>‹ 대화 내용 내보내기</span><span></span></div>
+    <div class="body"><div class="list"><span class="hit">텍스트 메시지만 보내기</span><span>모든 메시지 도큐먼트로 저장하기</span><span>채팅방 저장소에 저장</span></div></div></div>`,
   shareIos: `<div class="phone"><div class="bar"><span>‹ 채팅방 설정</span><span></span></div><div class="body"></div><div class="dim"></div>
     <div class="sheet"><div class="apps"><span><i></i>메시지</span><span><i></i>메일</span><span><i></i>메모</span><span><i></i>더보기</span></div>
     <div class="list"><span>복사</span><span class="hit">파일에 저장</span></div></div></div>`,
@@ -472,7 +474,7 @@ const GUIDE = {
     [S.room, "카카오톡에서 분석할 채팅방에 들어가서 오른쪽 위 <b>☰</b>를 눌러요."],
     [S.drawer, "열린 서랍 맨 아래의 <b>⚙ 설정</b>을 눌러요."],
     [S.settings, "<b>대화 내용 내보내기</b>를 눌러요."],
-    [S.choose("모든 메시지 내보내기"), "<b>텍스트 메시지만 보내기</b>를 골라요. 사진은 필요 없어요."],
+    [S.exportIos, "맨 위의 <b>텍스트 메시지만 보내기</b>를 골라요. 사진은 필요 없어요."],
     [S.shareIos, "공유 창에서 <b>파일에 저장</b> → 저장 위치는 그대로 두고 <b>저장</b>을 눌러요."],
     [S.site("최근 항목 › Talk_2026…txt"), "이 사이트로 돌아와 <b>내 대화 파일 올리기</b> → <b>파일 선택</b> → 최근 항목에서 방금 저장한 <b>.txt</b> 파일을 골라요."],
   ],
