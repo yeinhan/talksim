@@ -133,6 +133,9 @@ export function computeStats(messages, opts = {}) {
     p.affection = affectionScore(p, list.length);
   }
 
+  const titles = list.length >= 3 ? assignTitles(list) : [];
+  for (const p of list) p.titles = titles.filter((t) => t.name === p.name).map((t) => t.title);
+
   const busiestDays = [...byDay.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([day, count]) => ({ day, count }));
 
   return {
@@ -147,6 +150,7 @@ export function computeStats(messages, opts = {}) {
     busiestDays,
     longestStreakDays: longestStreak([...byDay.keys()]),
     verdict: verdict(list),
+    titles,
   };
 }
 
@@ -201,4 +205,37 @@ function verdict(list) {
   if (diff > 25) return { title: `${a.name} 님만 열정적`, desc: `${b.name} 님, 답장 좀 빨리 해주세요.` };
   if (diff > 10) return { title: `${a.name} 님이 조금 더 좋아하는 사이`, desc: "한쪽으로 살짝 기울어 있어요." };
   return { title: "적당히 편한 사이", desc: "무난하고 평화로운 대화예요." };
+}
+
+// 단톡방(3명 이상) 멤버 칭호. 칭호마다 가장 잘 맞는 사람에게 주되,
+// 한 사람이 칭호를 독차지하지 않도록 1인당 최대 2개까지만 준다.
+const TITLES = [
+  { title: "분위기 메이커", desc: "말을 제일 많이 해요", score: (p) => p.messages },
+  { title: "선톡왕", desc: "조용할 때 먼저 말을 꺼내요", score: (p) => p.starts },
+  { title: "답장 요정", desc: "답장이 제일 빨라요", ok: (p) => p.replies >= 5, score: (p) => -p.medianReplyMinutes },
+  { title: "리액션 장인", desc: "ㅋㅋ와 이모티콘을 제일 잘 써요", ok: (p) => p.messages >= 20, score: (p) => (p.laughs + p.emoticons) / p.messages },
+  { title: "폭격기", desc: "혼자 연달아 보내는 기록 1위", ok: (p) => p.maxStreak >= 3, score: (p) => p.maxStreak },
+  { title: "감성 충만", desc: "ㅠㅠ를 제일 많이 써요", ok: (p) => p.cries > 0, score: (p) => p.cries / p.messages },
+  { title: "사진 작가", desc: "사진을 제일 많이 보내요", ok: (p) => p.photos > 0, score: (p) => p.photos },
+  { title: "읽씹 장인", desc: "1시간 넘게 답 안 한 횟수 1위", ok: (p) => p.slowReplies > 0, score: (p) => p.slowReplies },
+  { title: "눈팅러", desc: "보기만 하고 말은 아껴요", score: (p) => -p.messages },
+];
+const MAX_TITLES_PER_PERSON = 2;
+
+export function assignTitles(people) {
+  const out = [];
+  const count = new Map();
+  for (const t of TITLES) {
+    const ranked = people
+      .filter((p) => (t.ok ? t.ok(p) : true) && Number.isFinite(t.score(p)))
+      .sort((a, b) => t.score(b) - t.score(a));
+    const p = ranked.find((x) => (count.get(x.name) || 0) < MAX_TITLES_PER_PERSON);
+    if (!p) continue;
+    count.set(p.name, (count.get(p.name) || 0) + 1);
+    out.push({ title: t.title, desc: t.desc, name: p.name });
+  }
+  for (const p of people) {
+    if (!count.has(p.name)) out.push({ title: "평화주의자", desc: "무난하게 대화에 함께해요", name: p.name });
+  }
+  return out;
 }
