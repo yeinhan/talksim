@@ -171,6 +171,7 @@ th:first-child, td:first-child { text-align: left; }
 th { font-weight: 400; color: var(--muted); font-size: 12px; }
 .table-wrap { overflow-x: auto; }
 
+.mask-opt { display: flex; align-items: center; gap: 6px; margin-top: -10px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 30; }
 .ad-slot { border: 1.5px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; font-size: 12px; color: var(--muted); }
@@ -277,6 +278,64 @@ function bars(people, key, fmt, cls = "") {
       <span class="v num">${fmt(p)}</span></div>`).join("")}</div>`;
 }
 
+function cardHTML(c) {
+  return `<div class="card" id="card">
+      <span class="tag">${esc(c.tag)}</span>
+      <div>
+        <h2 class="verdict">${esc(c.vt)}</h2>
+        <p class="muted">${esc(c.vd)}</p>
+      </div>
+      ${c.p.length === 2 ? `<div class="duo">${gauge({ name: c.p[0][0], affection: c.p[0][1] }, "var(--pink)")}${gauge({ name: c.p[1][0], affection: c.p[1][1] }, "var(--teal)")}</div>` : ""}
+      <div class="facts">
+        <div class="fact"><b>${esc(c.st[0])}</b><span>선톡왕 (${c.st[1]}%)</span></div>
+        <div class="fact"><b>${esc(c.fa[0])}</b><span>답장 ${fmtMinutes(c.fa[1])}</span></div>
+        <div class="fact"><b class="num">${Number(c.tm).toLocaleString()}</b><span>총 메시지</span></div>
+      </div>
+      <div class="foot">톡심 측정기</div>
+    </div>`;
+}
+
+// 결과 요약을 링크(#r=...)에 담는다. 대화 내용은 들어가지 않는다.
+function encodeSummary(c) {
+  const bytes = new TextEncoder().encode(JSON.stringify(c));
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodeSummary(str) {
+  const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/"));
+  const c = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (ch) => ch.charCodeAt(0))));
+  if (!c || typeof c.vt !== "string" || !Array.isArray(c.p) || !Array.isArray(c.st) || !Array.isArray(c.fa)) throw new Error("bad");
+  c.p = c.p.slice(0, 2).map(([n, a]) => [String(n).slice(0, 30), Math.max(0, Math.min(100, Number(a) || 0))]);
+  return c;
+}
+function maskName(n) {
+  const chars = [...String(n)];
+  return chars.length <= 1 ? "*" : chars[0] + "*".repeat(Math.min(chars.length - 1, 3));
+}
+function maskSummary(c) {
+  const names = new Map();
+  const m = (n) => (n === "-" ? n : (names.has(n) || names.set(n, maskName(n)), names.get(n)));
+  let vt = c.vt, vd = c.vd;
+  for (const n of [...c.p.map((p) => p[0]), c.st[0], c.fa[0]]) {
+    if (n && n !== "-") { vt = vt.split(n).join(m(n)); vd = vd.split(n).join(m(n)); }
+  }
+  return { ...c, vt, vd, p: c.p.map(([n, a]) => [m(n), a]), st: [m(c.st[0]), c.st[1]], fa: [m(c.fa[0]), c.fa[1]] };
+}
+
+function renderShared(c) {
+  $("#result").innerHTML = `
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <h2>친구가 보낸 톡심 결과</h2>
+    ${cardHTML(c)}
+    <button class="btn" id="try-mine" type="button">나도 우리 사이 확인하기</button>
+  </div>`;
+  $("#try-mine").addEventListener("click", () => {
+    $(".upload").scrollIntoView({ behavior: "smooth" });
+    $("#howto").open = true;
+  });
+}
+
 function render(parsed, isSample) {
   const s = computeStats(parsed.messages);
   current = { parsed, stats: s, isSample };
@@ -287,27 +346,25 @@ function render(parsed, isSample) {
   const peakHour = s.byHour.indexOf(Math.max(...s.byHour));
   const maxHour = Math.max(...s.byHour, 1);
   const maxWeek = Math.max(...s.byWeekday, 1);
+  const summary = {
+    tag: isSample ? "예시 결과" : `${fmtDate(s.first.time)} ~ ${fmtDate(s.last.time)}`,
+    vt: s.verdict.title,
+    vd: s.verdict.desc,
+    p: top2.length === 2 ? top2.map((p) => [p.name, p.affection]) : [],
+    st: [starter?.name ?? "-", Math.round((starter?.startShare ?? 0) * 100)],
+    fa: [fastest?.name ?? "-", fastest?.medianReplyMinutes ?? null],
+    tm: s.totalMessages,
+  };
+  current.summary = summary;
 
   $("#result").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
-    <div class="card" id="card">
-      <span class="tag">${isSample ? "예시 결과" : `${fmtDate(s.first.time)} ~ ${fmtDate(s.last.time)}`}</span>
-      <div>
-        <h2 class="verdict">${esc(s.verdict.title)}</h2>
-        <p class="muted">${esc(s.verdict.desc)}</p>
-      </div>
-      ${top2.length === 2 ? `<div class="duo">${gauge(top2[0], "var(--pink)")}${gauge(top2[1], "var(--teal)")}</div>` : ""}
-      <div class="facts">
-        <div class="fact"><b>${esc(starter?.name ?? "-")}</b><span>선톡왕 (${pct(starter?.startShare ?? 0)})</span></div>
-        <div class="fact"><b>${esc(fastest?.name ?? "-")}</b><span>답장 ${fmtMinutes(fastest?.medianReplyMinutes)}</span></div>
-        <div class="fact"><b class="num">${s.totalMessages.toLocaleString()}</b><span>총 메시지</span></div>
-      </div>
-      <div class="foot">톡심 측정기</div>
-    </div>
+    ${cardHTML(summary)}
     <div class="actions">
       <button class="btn ghost" id="save" type="button">결과 카드 저장</button>
-      <button class="btn ghost share-site" type="button">친구에게 공유</button>
+      <button class="btn ghost" id="share-result" type="button">결과 링크 공유</button>
     </div>
+    <label class="small muted mask-opt"><input type="checkbox" id="mask-names"> 공유할 때 이름 가리기</label>
 
     <section class="block">
       <div class="block-head"><h2>누가 먼저 톡했을까</h2><span class="small muted">6시간 넘게 조용하다 보낸 톡 기준</span></div>
@@ -374,6 +431,7 @@ function render(parsed, isSample) {
   </div>`;
 
   $("#save").addEventListener("click", saveCard);
+  $("#share-result").addEventListener("click", shareResult);
   $("#word").addEventListener("input", (e) => {
     const counts = countWord(current.parsed.messages, e.target.value);
     const rows = people.map((p) => ({ name: p.name, n: counts[p.name] || 0 }));
@@ -430,6 +488,27 @@ async function shareSite() {
   }
   copyLink();
 }
+async function shareResult() {
+  if (!current?.summary) return;
+  const c = $("#mask-names")?.checked ? maskSummary(current.summary) : current.summary;
+  const url = `${SITE_URL}#r=${encodeSummary(c)}`;
+  const text = `우리 사이 결과는 "${c.vt}" 너희도 확인해봐!`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "톡심 측정기 결과", text, url });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast("결과 링크를 복사했어요. 카톡방에 붙여넣어 보세요!");
+  } catch {
+    toast("링크를 복사하지 못했어요. 결과 카드 이미지로 공유해주세요.");
+  }
+}
+
 document.addEventListener("click", (e) => {
   if (e.target.closest(".share-site")) shareSite();
 });
@@ -538,6 +617,7 @@ $("#file").addEventListener("change", async (e) => {
       return;
     }
     showNotice(`메시지 ${parsed.messages.length.toLocaleString()}개를 분석했어요.`);
+    if (location.hash) history.replaceState(null, "", location.pathname);
     render(parsed, false);
     $("#result").scrollIntoView({ behavior: "smooth" });
   } catch (err) {
@@ -545,8 +625,18 @@ $("#file").addEventListener("change", async (e) => {
   }
 });
 
-showNotice("아래는 가상의 두 사람 대화로 만든 예시 결과예요. 내 대화 파일을 올리면 바뀌어요.");
-render(parseKakao(sampleChat()), true);
+let shared = null;
+const m = location.hash.match(/^#r=([A-Za-z0-9_-]+)$/);
+if (m) {
+  try { shared = decodeSummary(m[1]); } catch { shared = null; }
+}
+if (shared) {
+  showNotice("친구가 보낸 결과예요. 내 대화 파일을 올리면 우리 사이도 확인할 수 있어요.");
+  renderShared(shared);
+} else {
+  showNotice("아래는 가상의 두 사람 대화로 만든 예시 결과예요. 내 대화 파일을 올리면 바뀌어요.");
+  render(parseKakao(sampleChat()), true);
+}
 </script>
 
 </body>
