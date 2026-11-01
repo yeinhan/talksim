@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="카톡 대화 파일로 누가 먼저 톡했는지, 자주 쓰는 말, 답장 속도와 톡심 점수를 알려드려요. 대화는 폰 밖으로 나가지 않아요.">
 <meta property="og:title" content="톡심 측정기">
-<meta property="og:description" content="우리 대화 속 진심, 숫자로 확인해봐요">
+<meta property="og:description" content="친구 단톡방부터 1:1 대화까지, 우리 카톡을 숫자로 확인해봐요">
 <title>톡심 측정기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
@@ -15,27 +15,28 @@ body { margin: 0; }
 img { max-width: 100%; }
 /* Layout: one narrow phone column of stacked result sections, a shareable verdict card on top. */
 :root {
-  --bg: #fbf3f5;
+  --bg: #f5f6fa;
   --surface: #ffffff;
-  --ink: #2b1d2e;
-  --muted: #7d6a7f;
-  --line: #ecdde3;
-  --pink: #e0457b;
-  --pink-soft: #fbd9e5;
-  --teal: #1f9e94;
-  --teal-soft: #d3efec;
+  --ink: #1d2130;
+  --muted: #687089;
+  --line: #e1e4ee;
+  --accent: #4b5ee4;
+  --accent-soft: #e3e7fd;
+  --alt: #e8912f;
+  --alt-soft: #fcefdc;
+  --on-accent: #ffffff;
   --display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1a1219; --surface: #261b25; --ink: #f6e9f0; --muted: #b29fb2; --line: #3a2b38;
-    --pink: #ff6d9c; --pink-soft: #4a2135; --teal: #45c7bb; --teal-soft: #173a37; color-scheme: dark;
+    --bg: #13151c; --surface: #1d202c; --ink: #eef0f7; --muted: #9aa1b8; --line: #2d3142;
+    --accent: #8796ff; --accent-soft: #262c54; --alt: #f4ae57; --alt-soft: #3a2d1b; --on-accent: #12152a; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #1a1219; --surface: #261b25; --ink: #f6e9f0; --muted: #b29fb2; --line: #3a2b38;
-  --pink: #ff6d9c; --pink-soft: #4a2135; --teal: #45c7bb; --teal-soft: #173a37; color-scheme: dark;
+  --bg: #13151c; --surface: #1d202c; --ink: #eef0f7; --muted: #9aa1b8; --line: #2d3142;
+  --accent: #8796ff; --accent-soft: #262c54; --alt: #f4ae57; --alt-soft: #3a2d1b; --on-accent: #12152a; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -55,44 +56,44 @@ p { margin: 0; }
 .num { font-variant-numeric: tabular-nums; }
 
 header { display: flex; flex-direction: column; gap: 8px; }
-.brand { display: flex; align-items: center; gap: 8px; color: var(--pink); font-family: var(--display); font-size: 15px; }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--accent); font-family: var(--display); font-size: 15px; }
 .brand svg { width: 22px; height: 22px; }
 
 .upload { display: flex; flex-direction: column; gap: 10px; }
 .btn {
   appearance: none; border: 0; border-radius: 14px; padding: 15px 18px; font: inherit; font-family: var(--display);
-  font-size: 18px; background: var(--pink); color: #fff; cursor: pointer; text-align: center;
+  font-size: 18px; background: var(--accent); color: var(--on-accent); cursor: pointer; text-align: center;
 }
 .btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); font-size: 15px; padding: 10px 14px; }
-.btn:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.btn:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--alt); outline-offset: 2px; }
 input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .privacy { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); }
-.privacy svg { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--teal); }
+.privacy svg { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--alt); }
 details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
 summary { cursor: pointer; font-weight: 700; }
 .guide { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-radius: 12px; padding: 4px; gap: 4px; }
 .tabs button { appearance: none; border: 0; font: inherit; padding: 8px; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-.tabs button:focus-visible { outline: 3px solid var(--teal); outline-offset: 1px; }
+.tabs button:focus-visible { outline: 3px solid var(--alt); outline-offset: 1px; }
 .steps { list-style: none; margin: 0; padding: 0 0 4px; display: grid; grid-auto-flow: column; grid-auto-columns: 78%; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .steps::-webkit-scrollbar { display: none; }
 .step { scroll-snap-align: start; display: flex; flex-direction: column; gap: 10px; background: var(--bg); border-radius: 14px; padding: 12px; min-width: 0; }
-.step-n { font-family: var(--display); color: var(--pink); font-size: 14px; }
+.step-n { font-family: var(--display); color: var(--accent); font-size: 14px; }
 .step p { font-size: 14px; }
 .step b { color: var(--ink); }
 .dots { display: flex; justify-content: center; gap: 6px; }
 .dots i { width: 6px; height: 6px; border-radius: 99px; background: var(--line); transition: width .2s; }
-.dots i.on { width: 16px; background: var(--pink); }
+.dots i.on { width: 16px; background: var(--accent); }
 
 /* 그림용 미니 휴대폰 화면 (카카오톡 화면을 단순화한 예시) */
-.phone { --ph: #f4f1f3; --ph-ink: #4b3f4d; --ph-line: #ddd3d8; --ph-card: #fff;
+.phone { --ph: #f2f3f7; --ph-ink: #3d4253; --ph-line: #d9dce6; --ph-card: #fff;
   align-self: center; width: 150px; height: 230px; border-radius: 20px; border: 5px solid var(--ink); background: var(--ph);
   overflow: hidden; position: relative; display: flex; flex-direction: column; font-size: 10px; color: var(--ph-ink); line-height: 1.3; }
 .phone .bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 9px; background: var(--ph-card); border-bottom: 1px solid var(--ph-line); font-weight: 700; }
 .phone .body { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 .phone .bub { max-width: 70%; padding: 4px 7px; border-radius: 8px; background: var(--ph-card); }
-.phone .bub.me { align-self: flex-end; background: #e9dfe6; }
+.phone .bub.me { align-self: flex-end; background: #e1e5f6; }
 .phone .list { display: flex; flex-direction: column; background: var(--ph-card); border-radius: 8px; overflow: hidden; }
 .phone .list span { padding: 7px 8px; border-bottom: 1px solid var(--ph-line); }
 .phone .list span:last-child { border-bottom: 0; }
@@ -105,38 +106,38 @@ summary { cursor: pointer; font-weight: 700; }
 .phone .drawer .foot { display: flex; justify-content: flex-end; gap: 10px; padding: 8px 9px; border-top: 1px solid var(--ph-line); font-size: 13px; }
 .phone .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--ph-card); border-radius: 10px; padding: 8px 4px; text-align: center; font-size: 8px; }
 .phone .apps i { display: block; width: 22px; height: 22px; margin: 0 auto 3px; border-radius: 6px; background: var(--ph-line); }
-.phone .site-btn { background: #e0457b; color: #fff; border-radius: 8px; padding: 7px; text-align: center; font-weight: 700; }
-.phone .hit { position: relative; z-index: 1; outline: 2.5px solid var(--pink); outline-offset: 1px; border-radius: 6px; }
+.phone .site-btn { background: #4b5ee4; color: #fff; border-radius: 8px; padding: 7px; text-align: center; font-weight: 700; }
+.phone .hit { position: relative; z-index: 1; outline: 2.5px solid var(--accent); outline-offset: 1px; border-radius: 6px; }
 @media (prefers-reduced-motion: no-preference) {
   .phone .hit { animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { outline-offset: 4px; outline-color: transparent; } }
 }
-.phone .list .hit { outline: none; animation: none; box-shadow: inset 0 0 0 2.5px var(--pink); border-radius: 0; font-weight: 700; }
+.phone .list .hit { outline: none; animation: none; box-shadow: inset 0 0 0 2.5px var(--accent); border-radius: 0; font-weight: 700; }
 
-.notice { border-radius: 12px; padding: 10px 14px; font-size: 14px; background: var(--teal-soft); }
-.notice.error { background: var(--pink-soft); }
+.notice { border-radius: 12px; padding: 10px 14px; font-size: 14px; background: var(--alt-soft); }
+.notice.error { background: var(--accent-soft); }
 
 /* 공유 카드 */
 .card {
   background: var(--surface); border-radius: 24px; padding: 22px 20px; display: flex; flex-direction: column; gap: 16px;
   border: 1px solid var(--line); position: relative; overflow: hidden;
 }
-.card .tag { align-self: flex-start; font-size: 12px; letter-spacing: .04em; padding: 3px 10px; border-radius: 99px; background: var(--pink-soft); color: var(--pink); }
+.card .tag { align-self: flex-start; font-size: 12px; letter-spacing: .04em; padding: 3px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
 .verdict { font-size: 26px; line-height: 1.25; }
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .rank li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; }
-.rank-n { font-family: var(--display); font-size: 18px; color: var(--pink); text-align: center; line-height: 1.4; }
+.rank-n { font-family: var(--display); font-size: 18px; color: var(--accent); text-align: center; line-height: 1.4; }
 .rank li:nth-child(n+4) .rank-n { color: var(--muted); }
 .rank-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .rank-top { display: flex; justify-content: space-between; gap: 8px; }
 .rank-top b { font-family: var(--display); font-weight: 400; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank .bar { height: 8px; }
 .rank-titles { display: flex; flex-wrap: wrap; gap: 4px; }
-.rank-titles span { font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--teal-soft); color: var(--ink); }
+.rank-titles span { font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--alt-soft); color: var(--ink); }
 .titles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
 .title-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.title-name { font-size: 12px; color: var(--pink); font-weight: 700; }
+.title-name { font-size: 12px; color: var(--accent); font-weight: 700; }
 .title-card b { font-family: var(--display); font-weight: 400; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gauge { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
 .gauge svg { width: 100%; max-width: 130px; height: auto; }
@@ -154,15 +155,15 @@ section.block { display: flex; flex-direction: column; gap: 12px; padding-top: 6
 .vs-row { display: grid; grid-template-columns: 64px 1fr 56px; align-items: center; gap: 10px; }
 .vs-row .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .bar { height: 14px; border-radius: 99px; background: var(--line); overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 99px; background: var(--pink); }
-.bar.teal i { background: var(--teal); }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.bar.alt i { background: var(--alt); }
 .vs-row .v { text-align: right; font-size: 14px; }
 
 .pane { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.quote { font-size: 14px; border-left: 3px solid var(--pink); padding-left: 10px; white-space: pre-wrap; word-break: break-word; }
+.quote { font-size: 14px; border-left: 3px solid var(--accent); padding-left: 10px; white-space: pre-wrap; word-break: break-word; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); }
-.chip b { color: var(--pink); font-weight: 700; margin-left: 4px; }
+.chip b { color: var(--accent); font-weight: 700; margin-left: 4px; }
 .person-h { font-family: var(--display); font-size: 16px; }
 
 .search { display: flex; gap: 8px; }
@@ -172,11 +173,11 @@ section.block { display: flex; flex-direction: column; gap: 12px; padding-top: 6
 }
 
 .hours { display: grid; grid-template-columns: repeat(24, 1fr); align-items: end; gap: 2px; height: 90px; }
-.hours i { display: block; background: var(--teal); border-radius: 3px 3px 0 0; min-height: 2px; }
-.hours i.peak { background: var(--pink); }
+.hours i { display: block; background: var(--alt); border-radius: 3px 3px 0 0; min-height: 2px; }
+.hours i.peak { background: var(--accent); }
 .axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font-size: 12px; }
-.week .cell { border-radius: 10px; padding: 8px 0; background: var(--teal-soft); display: flex; flex-direction: column; }
+.week .cell { border-radius: 10px; padding: 8px 0; background: var(--alt-soft); display: flex; flex-direction: column; }
 .week .cell b { font-family: var(--display); font-weight: 400; font-size: 15px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -188,34 +189,38 @@ th { font-weight: 400; color: var(--muted); font-size: 12px; }
 .mask-opt { display: flex; align-items: center; gap: 6px; }
 .share-opts { display: flex; flex-direction: column; gap: 6px; margin-top: -8px; }
 .share-opts input[type=text] { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
-.owner-banner { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--pink-soft); }
-.owner-banner .small { color: var(--pink); letter-spacing: .04em; }
+.owner-banner { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--accent-soft); }
+.owner-banner .small { color: var(--accent); letter-spacing: .04em; }
 .owner-banner h2 { font-size: 22px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 30; }
 .ad-slot { border: 1.5px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; font-size: 12px; color: var(--muted); }
 
-.overlay { position: fixed; inset: 0; background: rgba(20, 10, 20, .7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 20; }
+.overlay { position: fixed; inset: 0; background: rgba(10, 12, 25, .7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 20; }
 .overlay img { max-height: 75vh; border-radius: 16px; }
 .overlay p { color: #fff; font-size: 14px; }
 .loader { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px;
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .loader-box { width: 100%; max-width: 320px; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px 22px;
-  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; box-shadow: 0 12px 40px rgba(60, 20, 50, .15); }
-.loader-heart { width: 56px; height: 56px; fill: var(--pink); }
+  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; box-shadow: 0 12px 40px rgba(20, 25, 50, .15); }
+.loader-icon { width: 64px; height: 54px; }
+.loader-icon .bubble { fill: var(--accent); }
+.loader-icon .dot { fill: var(--surface); }
 .loader-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; align-self: stretch; text-align: left; font-size: 14px; }
 .loader-steps li { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .loader-steps li::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 99px; border: 2px solid var(--line); box-sizing: border-box; }
 .loader-steps li.active { color: var(--ink); font-weight: 700; }
-.loader-steps li.active::before { border-color: var(--pink); border-top-color: transparent; }
+.loader-steps li.active::before { border-color: var(--accent); border-top-color: transparent; }
 .loader-steps li.done { color: var(--ink); }
-.loader-steps li.done::before { background: var(--teal); border-color: var(--teal); }
+.loader-steps li.done::before { background: var(--alt); border-color: var(--alt); }
 .loader-bar { align-self: stretch; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
-.loader-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--pink); transition: width .35s ease; }
+.loader-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--accent); transition: width .35s ease; }
 #loader-detail { color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
-  .loader-heart { animation: beat 1s ease-in-out infinite; }
-  @keyframes beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(.96); } 45% { transform: scale(1.1); } }
+  .loader-icon .dot { animation: typing 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .loader-icon .d2 { animation-delay: .15s; }
+  .loader-icon .d3 { animation-delay: .3s; }
+  @keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .6; } 30% { transform: translateY(-4px); opacity: 1; } }
   .loader-steps li.active::before { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 }
@@ -228,11 +233,11 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 <main>
   <header>
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 5.5C4 4.1 5.1 3 6.5 3h11C18.9 3 20 4.1 20 5.5v8c0 1.4-1.1 2.5-2.5 2.5H11l-4.5 4v-4h0C5.1 16 4 14.9 4 13.5z"/><path fill="var(--surface)" d="M12 13.2s-3.5-2-3.5-4.2c0-1.1.8-1.9 1.8-1.9.7 0 1.3.4 1.7 1 .4-.6 1-1 1.7-1 1 0 1.8.8 1.8 1.9 0 2.2-3.5 4.2-3.5 4.2z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 5.5C4 4.1 5.1 3 6.5 3h11C18.9 3 20 4.1 20 5.5v8c0 1.4-1.1 2.5-2.5 2.5H11l-4.5 4v-4C5.1 16 4 14.9 4 13.5z"/><rect x="8" y="9" width="2" height="4" rx="1" fill="var(--surface)"/><rect x="11" y="6.5" width="2" height="6.5" rx="1" fill="var(--surface)"/><rect x="14" y="8" width="2" height="5" rx="1" fill="var(--surface)"/></svg>
       톡심 측정기
     </div>
-    <h1>우리 대화 속 진심, 숫자로 확인해봐요</h1>
-    <p class="muted">누가 먼저 연락하는지, 첫마디는 뭔지, 어떤 말을 제일 많이 하는지 알려드려요.</p>
+    <h1>우리 카톡방, 숫자로 보면 어떨까?</h1>
+    <p class="muted">친구 단톡방도, 1:1 대화도 좋아요. 누가 먼저 말을 거는지, 누가 제일 수다쟁이인지, 어떤 말을 제일 많이 하는지 알려드려요.</p>
   </header>
 
   <div class="upload">
@@ -270,7 +275,7 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 
 <div id="loader" class="loader" role="alertdialog" aria-modal="true" aria-labelledby="loader-title" hidden>
   <div class="loader-box">
-    <svg class="loader-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.5 5c2 0 3.5 1.1 4.3 2.6h2.4C14 6.1 15.5 5 17.5 5 21 5 23.1 8.4 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>
+    <svg class="loader-icon" viewBox="0 0 48 40" aria-hidden="true"><path class="bubble" d="M8 2h32a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H20l-9 8v-8H8a6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/><circle class="dot d1" cx="15" cy="16" r="3"/><circle class="dot d2" cx="24" cy="16" r="3"/><circle class="dot d3" cx="33" cy="16" r="3"/></svg>
     <h2 id="loader-title">톡심 측정 중</h2>
     <ol class="loader-steps">
       <li data-step="read">대화 파일 여는 중</li>
@@ -346,7 +351,7 @@ function cardHTML(c) {
             <div class="bar"><i style="width:${a}%"></i></div>
             ${ts && ts.length ? `<div class="rank-titles">${ts.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}</div>
         </li>`).join("")}</ol>` : ""}
-      ${c.p.length === 2 && !(c.rank && c.rank.length) ? `<div class="duo">${gauge({ name: c.p[0][0], affection: c.p[0][1] }, "var(--pink)")}${gauge({ name: c.p[1][0], affection: c.p[1][1] }, "var(--teal)")}</div>` : ""}
+      ${c.p.length === 2 && !(c.rank && c.rank.length) ? `<div class="duo">${gauge({ name: c.p[0][0], affection: c.p[0][1] }, "var(--accent)")}${gauge({ name: c.p[1][0], affection: c.p[1][1] }, "var(--alt)")}</div>` : ""}
       <div class="facts">
         <div class="fact"><b>${esc(c.st[0])}</b><span>선톡왕 (${c.st[1]}%)</span></div>
         <div class="fact"><b>${esc(c.fa[0])}</b><span>답장 ${fmtMinutes(c.fa[1])}</span></div>
@@ -518,7 +523,7 @@ function renderView(V, shared) {
 
     <section class="block">
       <h2>답장 속도</h2>
-      ${bars(people, "medianReplyMinutes", (p) => fmtMinutes(p.medianReplyMinutes), "teal")}
+      ${bars(people, "medianReplyMinutes", (p) => fmtMinutes(p.medianReplyMinutes), "alt")}
       <p class="small muted">보통 걸린 시간(중간값)이에요. 막대가 짧을수록 빨라요.</p>
       <div class="pane">
         <span class="person-h">읽씹 의심 횟수 (1시간 넘게 답 없음)</span>
@@ -534,7 +539,7 @@ function renderView(V, shared) {
       </div>`).join("")}
       ${shared ? "" : `<div class="pane">
         <label class="person-h" for="word">이 단어 몇 번 말했을까?</label>
-        <div class="search"><input id="word" type="search" placeholder="예: 보고싶어, 사랑해, 배고파" autocomplete="off"></div>
+        <div class="search"><input id="word" type="search" placeholder="예: ㅋㅋㅋ, 배고파, 언제 만나" autocomplete="off"></div>
         <div id="word-result">${bars(people, "_zero", () => "0번")}</div>
       </div>`}
     </section>
@@ -632,7 +637,7 @@ async function copyLink() {
 
 async function shareSite() {
   const v = current && !current.isSample ? current.stats.verdict.title : null;
-  const text = v ? `우리 사이 결과: "${v}" 너희는 어때? 톡심 측정기로 확인해봐!` : "우리 카톡 대화 속 진심, 숫자로 확인해봐! 톡심 측정기";
+  const text = v ? `우리 사이 결과: "${v}" 너희는 어때? 톡심 측정기로 확인해봐!` : "우리 카톡방 대화, 숫자로 확인해봐! 톡심 측정기";
   if (navigator.share) {
     try {
       await navigator.share({ title: "톡심 측정기", text, url: SITE_URL });
@@ -703,7 +708,7 @@ const S = {
     <div class="body"><div class="list"><span>📁 GarageBand</span><span class="hit">📁 카카오톡</span><span>📁 Pages</span></div>
     <div class="list"><span>KakaoTalk_Chats_2026…zip</span></div></div></div>`,
   site: (pick) => `<div class="phone"><div class="bar"><span>톡심 측정기</span><span></span></div>
-    <div class="body"><span style="font-weight:700">우리 대화 속 진심</span><div class="site-btn hit">내 대화 파일 올리기</div>
+    <div class="body"><span style="font-weight:700">우리 카톡방 분석</span><div class="site-btn hit">내 대화 파일 올리기</div>
     <div class="list"><span>${pick}</span></div></div></div>`,
 };
 const GUIDE = {
@@ -838,7 +843,7 @@ async function start() {
       return;
     }
   }
-  showNotice("아래는 가상의 두 사람 대화로 만든 예시 결과예요. 내 대화 파일을 올리면 바뀌어요.");
+  showNotice("아래는 가상의 친구 4명 단톡방으로 만든 예시 결과예요. 내 대화 파일을 올리면 바뀌어요.");
   render(parseKakao(sampleChat()), true);
 }
 start();
