@@ -69,23 +69,27 @@ function classify(text) {
   return "text";
 }
 
-export function parseKakao(raw) {
-  const lines = raw.replace(/^﻿/, "").split(/\r?\n/);
+// 한 줄씩 넣는 분석기. 큰 파일(수년치 대화)도 전체 텍스트를 메모리에 들고 있지 않고 처리할 수 있다.
+const MAX_TEXT = 2000; // 한 메시지에 붙여넣은 아주 긴 글은 앞부분만 보관
+
+export function createKakaoParser() {
   const messages = [];
   const counts = {};
   let title = null;
   let pcDate = null;
   let last = null;
+  let first = true;
 
-  const firstLine = lines[0]?.trim() ?? "";
-  if (/카카오톡 대화|KakaoTalk Chats? with|Talk_/.test(firstLine)) title = firstLine;
-
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-    if (!line) continue;
+  function push(rawLine) {
+    let line = rawLine.trimEnd();
+    if (first) {
+      line = line.replace(/^﻿/, "");
+      first = false;
+      if (/카카오톡 대화|KakaoTalk Chats? with|Talk_/.test(line.trim())) { title = line.trim(); }
+    }
+    if (!line) return;
 
     let parsed = null;
-
     for (const p of MOBILE_PATTERNS) {
       const m = line.match(p.re);
       if (m) {
@@ -97,16 +101,12 @@ export function parseKakao(raw) {
 
     if (!parsed) {
       let d = line.match(PC_DATE);
-      if (d) {
-        pcDate = [+d[1], +d[2] - 1, +d[3]];
-        last = null;
-        continue;
-      }
+      if (d) { pcDate = [+d[1], +d[2] - 1, +d[3]]; last = null; return; }
       d = line.match(PC_DATE_EN);
       if (d && MONTHS[d[1].slice(0, 3).toLowerCase()] != null) {
         pcDate = [+d[3], MONTHS[d[1].slice(0, 3).toLowerCase()], +d[2]];
         last = null;
-        continue;
+        return;
       }
       const m = pcDate && line.match(PC_MSG);
       if (m) {
@@ -118,25 +118,35 @@ export function parseKakao(raw) {
 
     if (parsed) {
       counts[parsed.format] = (counts[parsed.format] || 0) + 1;
-      last = { time: parsed.time, sender: parsed.sender, text: parsed.text, kind: "text" };
+      last = { time: parsed.time, sender: parsed.sender, text: parsed.text.slice(0, MAX_TEXT), kind: "text" };
       messages.push(last);
-      continue;
+      return;
     }
 
     // 날짜 구분선, 입장/퇴장 같은 시스템 메시지는 건너뛴다.
-    if (isSystemLine(line)) {
-      last = null;
-      continue;
-    }
+    if (isSystemLine(line)) { last = null; return; }
 
     // 그 외 줄은 앞 메시지의 줄바꿈된 내용
-    if (last) last.text += "\n" + line;
+    if (last && last.text.length < MAX_TEXT) last.text = (last.text + "\n" + line).slice(0, MAX_TEXT);
   }
 
-  for (const msg of messages) msg.kind = classify(msg.text);
+  function finish() {
+    for (const msg of messages) msg.kind = classify(msg.text);
+    // 내보내기 파일은 시간순이지만, 혹시 섞여 있어도 통계가 맞도록 정렬한다.
+    for (let k = 1; k < messages.length; k++) {
+      if (messages[k].time < messages[k - 1].time) { messages.sort((a, b) => a.time - b.time); break; }
+    }
+    const format = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "unknown";
+    return { title, format, messages };
+  }
 
-  const format = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "unknown";
-  return { title, format, messages };
+  return { push, finish, get count() { return messages.length; } };
+}
+
+export function parseKakao(raw) {
+  const parser = createKakaoParser();
+  for (const line of raw.split(/\r?\n/)) parser.push(line);
+  return parser.finish();
 }
 
 function isSystemLine(line) {

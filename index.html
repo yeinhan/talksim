@@ -59,7 +59,35 @@ header { display: flex; flex-direction: column; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--accent); font-family: var(--display); font-size: 15px; }
 .brand svg { width: 22px; height: 22px; }
 
-.upload { display: flex; flex-direction: column; gap: 10px; }
+.view { display: flex; flex-direction: column; gap: 14px; }
+.stepper { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 12px; color: var(--muted); }
+.stepper li { display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; text-align: center; }
+.stepper li span { width: 26px; height: 26px; border-radius: 99px; display: grid; place-items: center; background: var(--line); color: var(--muted); font-weight: 700; font-size: 13px; }
+.stepper li.done span { background: var(--alt); color: #fff; }
+.stepper li.now { color: var(--ink); font-weight: 700; }
+.stepper li.now span { background: var(--accent); color: var(--on-accent); }
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; min-height: 210px; padding: 24px 18px;
+  border: 2px dashed var(--accent); border-radius: 20px; background: var(--surface); cursor: pointer; transition: background .2s, border-color .2s; }
+.drop:hover, .drop.drag { background: var(--accent-soft); }
+.drop:focus-within { outline: 3px solid var(--alt); outline-offset: 2px; }
+.drop.ready { border-style: solid; border-color: var(--alt); }
+.drop.error { border-color: #d64545; }
+.drop-icon { width: 56px; height: 56px; }
+.drop-title { font-family: var(--display); font-size: 19px; word-break: break-all; }
+.drop-sub { word-break: keep-all; }
+.gauge-wrap { display: flex; align-items: center; gap: 10px; align-self: stretch; }
+.up-bar { flex: 1; height: 12px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.up-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--accent); transition: width .15s linear; }
+.drop.ready .up-bar i { background: var(--alt); }
+#up-pct { width: 40px; text-align: right; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.me-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.me-btn { appearance: none; font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-width: 0; }
+.me-btn b { font-family: var(--display); font-weight: 400; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-btn.saved { border-color: var(--alt); }
+.me-btn:hover, .me-btn:focus-visible { border-color: var(--accent); outline: none; background: var(--accent-soft); }
+.result-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.result-title button { appearance: none; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; padding: 4px; }
 .btn {
   appearance: none; border: 0; border-radius: 14px; padding: 15px 18px; font: inherit; font-family: var(--display);
   font-size: 18px; background: var(--accent); color: var(--on-accent); cursor: pointer; text-align: center;
@@ -199,9 +227,9 @@ th { font-weight: 400; color: var(--muted); font-size: 12px; }
 .overlay { position: fixed; inset: 0; background: rgba(10, 12, 25, .7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 20; }
 .overlay img { max-height: 75vh; border-radius: 16px; }
 .overlay p { color: #fff; font-size: 14px; }
-.loader { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px;
+.loader-overlay-unused { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px;
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-.loader-box { width: 100%; max-width: 320px; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px 22px;
+.loader-box { width: 100%; max-width: 360px; align-self: center; margin-top: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px 22px;
   display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; box-shadow: 0 12px 40px rgba(20, 25, 50, .15); }
 .loader-icon { width: 64px; height: 54px; }
 .loader-icon .bubble { fill: var(--accent); }
@@ -236,18 +264,36 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 5.5C4 4.1 5.1 3 6.5 3h11C18.9 3 20 4.1 20 5.5v8c0 1.4-1.1 2.5-2.5 2.5H11l-4.5 4v-4C5.1 16 4 14.9 4 13.5z"/><rect x="8" y="9" width="2" height="4" rx="1" fill="var(--surface)"/><rect x="11" y="6.5" width="2" height="6.5" rx="1" fill="var(--surface)"/><rect x="14" y="8" width="2" height="5" rx="1" fill="var(--surface)"/></svg>
       톡심 측정기
     </div>
-    <h1>우리 카톡방, 숫자로 보면 어떨까?</h1>
-    <p class="muted">친구 단톡방도, 1:1 대화도 좋아요. 누가 먼저 말을 거는지, 누가 제일 수다쟁이인지, 어떤 말을 제일 많이 하는지 알려드려요.</p>
+    <h1 class="intro">우리 카톡방, 숫자로 보면 어떨까?</h1>
+    <p class="muted intro">친구 단톡방도, 1:1 대화도 좋아요. 누가 먼저 말을 거는지, 누가 제일 수다쟁이인지, 어떤 말을 제일 많이 하는지 알려드려요.</p>
   </header>
 
-  <div class="upload">
-    <label class="btn" for="file">내 대화 파일 올리기</label>
+  <ol class="stepper" id="stepper" aria-label="진행 단계">
+    <li data-step="upload"><span>1</span>파일</li>
+    <li data-step="analyze"><span>2</span>분석</li>
+    <li data-step="me"><span>3</span>나 고르기</li>
+    <li data-step="result"><span>4</span>결과</li>
+  </ol>
+
+  <div id="notice" class="notice" role="status" hidden></div>
+
+  <section class="view" data-view="upload">
+    <label class="drop" id="drop" for="file">
+      <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h14l10 10v24a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/><path d="M28 6v10h10" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/><path d="M25 35V22m-6 6 6-6 6 6" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="drop-title" id="drop-title">여기를 눌러 대화 파일 선택</span>
+      <span class="drop-sub small muted" id="drop-sub">카카오톡에서 내보낸 .txt 또는 .zip 파일</span>
+      <span class="gauge-wrap" id="gauge-wrap" hidden>
+        <span class="up-bar"><i id="up-fill"></i></span>
+        <span class="small num" id="up-pct">0%</span>
+      </span>
+    </label>
     <input id="file" type="file" accept=".txt,.csv,.zip,text/plain,application/zip">
+    <button class="btn" id="analyze" type="button" disabled>분석하기</button>
     <div class="privacy">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
       <span>대화 내용은 이 휴대폰 안에서만 분석되고, 어디에도 전송되거나 저장되지 않아요.</span>
     </div>
-    <details id="howto" open>
+    <details id="howto">
       <summary>대화 파일은 어떻게 받나요? <span class="small muted">1분이면 돼요</span></summary>
       <div class="guide">
         <div class="tabs" role="tablist" aria-label="휴대폰 종류">
@@ -259,12 +305,39 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
         <p class="small muted">옆으로 넘겨서 다음 단계를 보세요. 카카오톡 버전에 따라 메뉴 이름이나 위치가 조금 다를 수 있어요. 그림은 이해를 돕기 위한 예시예요.</p>
       </div>
     </details>
-  </div>
+    <button class="btn ghost" id="show-sample" type="button">예시 결과 먼저 구경하기</button>
+  </section>
 
-  <div id="notice" class="notice" role="status"></div>
+  <section class="view" data-view="analyze" hidden>
+    <div class="loader-box" id="loader" aria-live="polite">
+      <svg class="loader-icon" viewBox="0 0 48 40" aria-hidden="true"><path class="bubble" d="M8 2h32a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H20l-9 8v-8H8a6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/><circle class="dot d1" cx="15" cy="16" r="3"/><circle class="dot d2" cx="24" cy="16" r="3"/><circle class="dot d3" cx="33" cy="16" r="3"/></svg>
+      <h2 id="loader-title">톡심 측정 중</h2>
+      <ol class="loader-steps">
+        <li data-step="who">참여자 확인하는 중</li>
+        <li data-step="stats">선톡·답장·단어 세는 중</li>
+        <li data-step="titles">순위와 칭호 정하는 중</li>
+        <li data-step="done">결과지 만드는 중</li>
+      </ol>
+      <div class="loader-bar"><i id="loader-fill"></i></div>
+      <p class="small" id="loader-detail">대화는 이 휴대폰 밖으로 나가지 않아요</p>
+    </div>
+  </section>
+
+  <section class="view" data-view="me" hidden>
+    <div>
+      <h2>이 대화에서 누가 나예요?</h2>
+      <p class="muted small">고른 이름은 결과지와 공유 링크에 "○○님의 톡심 결과지"로 표시돼요.</p>
+    </div>
+    <div class="me-list" id="me-list"></div>
+    <button class="btn ghost" id="me-skip" type="button">이름 없이 결과 보기</button>
+  </section>
+
+  <section class="view" data-view="result" hidden>
+    <div id="result"></div>
+    <button class="btn ghost" id="restart" type="button">다른 대화 분석하기</button>
+  </section>
+
   <div id="toast" class="toast" role="status" hidden></div>
-
-  <div id="result"></div>
 
   <button class="btn share-site" type="button">톡심 측정기 친구에게 알려주기</button>
 
@@ -272,21 +345,6 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 
   <footer>톡심 측정기는 카카오와 관련 없는 개인 프로젝트예요. · 재미로만 봐주세요 · <a href="privacy.html" style="color:inherit">개인정보처리방침</a></footer>
 </main>
-
-<div id="loader" class="loader" role="alertdialog" aria-modal="true" aria-labelledby="loader-title" hidden>
-  <div class="loader-box">
-    <svg class="loader-icon" viewBox="0 0 48 40" aria-hidden="true"><path class="bubble" d="M8 2h32a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H20l-9 8v-8H8a6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/><circle class="dot d1" cx="15" cy="16" r="3"/><circle class="dot d2" cx="24" cy="16" r="3"/><circle class="dot d3" cx="33" cy="16" r="3"/></svg>
-    <h2 id="loader-title">톡심 측정 중</h2>
-    <ol class="loader-steps">
-      <li data-step="read">대화 파일 여는 중</li>
-      <li data-step="parse">메시지 읽는 중</li>
-      <li data-step="stats">선톡·답장·단어 세는 중</li>
-      <li data-step="done">결과지 만드는 중</li>
-    </ol>
-    <div class="loader-bar"><i id="loader-fill"></i></div>
-    <p class="small" id="loader-detail">대화는 이 휴대폰 밖으로 나가지 않아요</p>
-  </div>
-</div>
 
 <div id="overlay" class="overlay" hidden>
   <img id="shot" alt="결과 카드 이미지">
@@ -296,11 +354,11 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script type="module">
 import { parseKakao } from "./src/parser.js";
 import { computeStats, countWord } from "./src/stats.js";
 import { sampleChat } from "./src/sample.js";
+import { readChatFile, ChatFileError } from "./src/reader.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -488,7 +546,8 @@ function renderView(V, shared) {
 
   $("#result").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
-    ${shared ? `<div class="owner-banner"><span class="small">공유받은 결과지</span><h2>${V.owner ? `${esc(V.owner)}님의 톡심 결과지입니다` : "친구가 보낸 톡심 결과지입니다"}</h2></div>` : ""}
+    ${shared ? `<div class="owner-banner"><span class="small">공유받은 결과지</span><h2>${V.owner ? `${esc(V.owner)}님의 톡심 결과지입니다` : "친구가 보낸 톡심 결과지입니다"}</h2></div>`
+      : `<div class="result-title"><h2>${current?.isSample ? "예시 결과지" : V.owner ? `${esc(V.owner)}님의 톡심 결과지` : "톡심 결과지"}</h2>${current?.isSample ? "" : '<button type="button" id="rename">이름 바꾸기</button>'}</div>`}
     ${cardHTML(V.card)}
     ${shared
       ? '<button class="btn" id="try-mine" type="button">나도 우리 사이 확인하기</button>'
@@ -496,12 +555,7 @@ function renderView(V, shared) {
       <button class="btn ghost" id="save" type="button">결과 카드 저장</button>
       <button class="btn ghost" id="share-result" type="button">결과 링크 공유</button>
     </div>
-    <div class="share-opts">
-      <label class="small" for="owner-name">결과지에 표시할 내 이름</label>
-      <input id="owner-name" type="text" maxlength="20" list="owner-list" placeholder="예: 한예인" autocomplete="nickname">
-      <datalist id="owner-list">${people.map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist>
-      <label class="small muted mask-opt"><input type="checkbox" id="mask-names"> 공유할 때 대화 상대 이름 가리기</label>
-    </div>`}
+    <label class="small muted mask-opt"><input type="checkbox" id="mask-names"> 공유할 때 대화 상대 이름 가리기</label>`}
 
     ${V.titles && V.titles.length ? `<section class="block">
       <h2>멤버별 칭호</h2>
@@ -574,17 +628,14 @@ function renderView(V, shared) {
   </div>`;
 
   if (shared) {
-    const go = () => {
-      $(".upload").scrollIntoView({ behavior: "smooth" });
-      $("#howto").open = true;
-    };
-    $("#try-mine").addEventListener("click", go);
-    $("#try-mine-2").addEventListener("click", go);
+    const mine = () => { showNotice(""); $("#stepper").hidden = false; $("#restart").hidden = false; document.title = "톡심 측정기"; go("upload"); };
+    $("#try-mine").addEventListener("click", mine);
+    $("#try-mine-2").addEventListener("click", mine);
     return;
   }
+  $("#rename")?.addEventListener("click", () => go("me"));
   $("#save").addEventListener("click", saveCard);
   $("#share-result").addEventListener("click", shareResult);
-  try { $("#owner-name").value = localStorage.getItem("talksim-owner") || ""; } catch {}
   $("#word").addEventListener("input", (e) => {
     const counts = countWord(current.parsed.messages, e.target.value);
     const rows = people.map((p) => ({ name: p.name, n: counts[p.name] || 0 }));
@@ -592,9 +643,10 @@ function renderView(V, shared) {
   });
 }
 
-function render(parsed, isSample) {
+function render(parsed, isSample, owner = "") {
   const s = computeStats(parsed.messages);
   const view = buildView(s, isSample);
+  view.owner = owner;
   current = { parsed, stats: s, isSample, view, summary: view.card };
   renderView(view, false);
 }
@@ -650,8 +702,7 @@ async function shareSite() {
 }
 async function shareResult() {
   if (!current?.view) return;
-  const owner = ($("#owner-name")?.value || "").trim().slice(0, 20);
-  try { localStorage.setItem("talksim-owner", owner); } catch {}
+  const owner = (current.view.owner || "").slice(0, 20);
   const base = $("#mask-names")?.checked ? maskView(current.view) : current.view;
   const V = { ...base, owner };
   const url = `${SITE_URL}#r=${await encodeView(V)}`;
@@ -757,72 +808,146 @@ function showNotice(msg, error = false) {
   n.hidden = !msg;
 }
 
-async function readFile(file) {
-  if (/\.zip$/i.test(file.name)) {
-    const zip = await JSZip.loadAsync(file);
-    const txt = Object.values(zip.files).filter((f) => !f.dir && /\.(txt|csv)$/i.test(f.name) && !/(^|\/)__MACOSX\//.test(f.name)).sort((x, y) => (y._data?.uncompressedSize || 0) - (x._data?.uncompressedSize || 0))[0];
-    if (!txt) throw new Error("압축 파일 안에 대화 텍스트 파일이 없어요.");
-    return txt.async("string");
-  }
-  return file.text();
+// ---- 단계 화면 ----
+const VIEWS = ["upload", "analyze", "me", "result"];
+function go(view, { push = true } = {}) {
+  document.querySelectorAll("[data-view]").forEach((el) => (el.hidden = el.dataset.view !== view));
+  const k = VIEWS.indexOf(view);
+  document.querySelectorAll("#stepper li").forEach((li, n) => {
+    li.classList.toggle("done", n < k);
+    li.classList.toggle("now", n === k);
+  });
+  document.querySelectorAll(".intro").forEach((el) => (el.hidden = view !== "upload"));
+  document.querySelectorAll(".share-site, .ad-slot").forEach((el) => (el.hidden = view === "analyze" || view === "me"));
+  window.scrollTo(0, 0);
+  if (push && history.state?.view !== view) history.pushState({ view }, "", location.hash.startsWith("#r=") && view === "result" ? location.hash : location.pathname);
 }
+window.addEventListener("popstate", (e) => {
+  const v = e.state?.view || "upload";
+  // 분석 중 화면으로는 되돌아가지 않는다.
+  if (v === "analyze" || ((v === "me" || v === "result") && !current)) return go("upload", { push: false });
+  go(v, { push: false });
+});
 
-// ---- 분석 중 화면 ----
-const STEPS = ["read", "parse", "stats", "done"];
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+// ---- 1. 파일 고르기 ----
+let parsedFile = null;
+const fmtSize = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)}GB` : b >= 1024 ** 2 ? `${(b / 1024 ** 2).toFixed(1)}MB` : `${Math.max(1, Math.round(b / 1024))}KB`);
+function setGauge(p) {
+  $("#up-fill").style.width = `${Math.round(p * 100)}%`;
+  $("#up-pct").textContent = `${Math.round(p * 100)}%`;
+}
+let readToken = 0;
+async function pickFile(file) {
+  if (!file) return;
+  const token = ++readToken;
+  parsedFile = null;
+  showNotice("");
+  const drop = $("#drop");
+  drop.classList.remove("ready", "error");
+  $("#analyze").disabled = true;
+  $("#drop-title").textContent = file.name;
+  $("#drop-sub").textContent = `${fmtSize(file.size)} · 읽는 중…`;
+  $("#gauge-wrap").hidden = false;
+  setGauge(0);
+  try {
+    const parsed = await readChatFile(file, (p) => token === readToken && setGauge(p));
+    if (token !== readToken) return;
+    setGauge(1);
+    if (parsed.messages.length < 2) throw new ChatFileError("대화를 찾지 못했어요. 카카오톡 '대화 내용 내보내기'로 받은 파일인지 확인해주세요.");
+    parsedFile = parsed;
+    const ms = parsed.messages;
+    drop.classList.add("ready");
+    $("#drop-sub").textContent = `메시지 ${ms.length.toLocaleString()}개 · ${fmtDate(ms[0].time)} ~ ${fmtDate(ms[ms.length - 1].time)} · 눌러서 다른 파일 고르기`;
+    $("#analyze").disabled = false;
+    $("#analyze").focus({ preventScroll: true });
+  } catch (err) {
+    if (token !== readToken) return;
+    console.error(err);
+    drop.classList.add("error");
+    $("#gauge-wrap").hidden = true;
+    $("#drop-sub").textContent = "눌러서 다시 고르기";
+    const msg = err instanceof ChatFileError ? err.message
+      : /memory|allocation|RangeError/i.test(String(err)) ? "파일이 너무 커서 이 휴대폰에서 읽지 못했어요. 아이폰이면 '텍스트 메시지만' 내보내기로 받은 .txt 파일을 올려주세요."
+      : "파일을 읽지 못했어요. 다시 내보내기 한 파일로 시도해주세요.";
+    showNotice(msg, true);
+    $("#howto").open = true;
+  }
+}
+$("#file").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  pickFile(file);
+});
+const drop = $("#drop");
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("drag"); }));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("drag"); }));
+drop.addEventListener("drop", (e) => pickFile(e.dataTransfer.files[0]));
+
+// ---- 2. 분석 ----
+const STEPS = ["who", "stats", "titles", "done"];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 function loaderStep(step, detail) {
   const k = STEPS.indexOf(step);
   document.querySelectorAll(".loader-steps li").forEach((li, n) => {
-    li.classList.toggle("done", n < k);
-    li.classList.toggle("active", n === k);
+    li.classList.toggle("done", n < k || step === "done" && n === k);
+    li.classList.toggle("active", n === k && step !== "done");
   });
   $("#loader-fill").style.width = `${((k + 1) / STEPS.length) * 100}%`;
   if (detail) $("#loader-detail").textContent = detail;
 }
-function showLoader() {
-  $("#loader-detail").textContent = "대화는 이 휴대폰 밖으로 나가지 않아요";
-  $("#loader").hidden = false;
-  document.body.style.overflow = "hidden";
-}
-function hideLoader() {
-  $("#loader").hidden = true;
-  document.body.style.overflow = "";
-}
-
-$("#file").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  e.target.value = "";
-  if (!file) return;
+$("#analyze").addEventListener("click", async () => {
+  if (!parsedFile) return;
+  go("analyze");
   const started = Date.now();
-  showLoader();
   try {
-    loaderStep("read", `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+    loaderStep("who", "대화는 이 휴대폰 밖으로 나가지 않아요");
+    await wait(350);
+    loaderStep("stats", `메시지 ${parsedFile.messages.length.toLocaleString()}개를 세고 있어요`);
     await nextFrame();
-    const text = await readFile(file);
-    loaderStep("parse");
-    await nextFrame();
-    const parsed = parseKakao(text);
-    if (parsed.messages.length < 2) {
-      hideLoader();
-      showNotice("대화를 찾지 못했어요. 카카오톡 '대화 내용 내보내기'로 받은 파일인지 확인해주세요.", true);
-      $("#howto").open = true;
-      return;
-    }
-    loaderStep("stats", `메시지 ${parsed.messages.length.toLocaleString()}개를 세고 있어요`);
-    await nextFrame();
-    if (location.hash) history.replaceState(null, "", location.pathname);
-    render(parsed, false);
+    render(parsedFile, false);
+    loaderStep("titles", `${current.stats.people.length}명의 기록을 비교하는 중`);
+    await wait(350);
     loaderStep("done");
-    // 너무 빨리 사라지면 깜빡이는 것처럼 보여서 최소 1.2초는 보여준다.
-    await wait(Math.max(0, 1200 - (Date.now() - started)));
-    hideLoader();
-    showNotice(`메시지 ${parsed.messages.length.toLocaleString()}개를 분석했어요.`);
-    $("#result").scrollIntoView({ behavior: "smooth" });
+    await wait(Math.max(250, 1400 - (Date.now() - started)));
+    renderMe();
+    go("me", { push: false });
+    history.replaceState({ view: "me" }, "", location.pathname);
   } catch (err) {
-    hideLoader();
-    showNotice(err.message || "파일을 읽지 못했어요.", true);
+    console.error(err);
+    go("upload");
+    showNotice("분석하다 문제가 생겼어요. 다른 파일로 다시 시도해주세요.", true);
   }
+});
+
+// ---- 3. 누가 나예요? ----
+function renderMe() {
+  let saved = "";
+  try { saved = localStorage.getItem("talksim-owner") || ""; } catch {}
+  $("#me-list").innerHTML = current.stats.people.map((p) => `<button type="button" class="me-btn${p.name === saved ? " saved" : ""}" data-name="${esc(p.name)}"><b>${esc(p.name)}</b><span class="small muted">메시지 ${p.messages.toLocaleString()}개</span></button>`).join("");
+}
+function chooseOwner(name) {
+  current.view.owner = name;
+  try { if (name) localStorage.setItem("talksim-owner", name); } catch {}
+  renderView(current.view, false);
+  go("result");
+}
+$("#me-list").addEventListener("click", (e) => {
+  const b = e.target.closest(".me-btn");
+  if (b) chooseOwner(b.dataset.name);
+});
+$("#me-skip").addEventListener("click", () => chooseOwner(""));
+
+// ---- 4. 결과 ----
+$("#restart").addEventListener("click", () => {
+  showNotice("");
+  document.title = "톡심 측정기";
+  go("upload");
+});
+$("#show-sample").addEventListener("click", () => {
+  render(parseKakao(sampleChat()), true);
+  showNotice("가상의 친구 4명 단톡방으로 만든 예시 결과예요.");
+  go("result");
 });
 
 async function start() {
@@ -830,21 +955,20 @@ async function start() {
   if (m) {
     try {
       const V = await decodeView(m[1]);
-      // 공유받은 사람은 결과지를 먼저 보고, 아래에서 직접 해볼 수 있게 순서를 바꾼다.
-      $("header").after($("#notice"), $("#result"));
-      $("#howto").open = false;
       renderView(V, true);
+      $("#stepper").hidden = true;
+      $("#restart").hidden = true;
       document.title = V.owner ? `${V.owner}님의 톡심 결과지 · 톡심 측정기` : "친구의 톡심 결과지 · 톡심 측정기";
-      showNotice("친구가 보낸 결과예요. 내 대화 파일을 올리면 우리 사이도 확인할 수 있어요.");
+      history.replaceState({ view: "result" }, "", location.href);
+      go("result", { push: false });
       return;
     } catch {
-      showNotice("결과 링크를 열지 못했어요. 링크가 잘렸거나 이 브라우저가 지원하지 않아요. 대신 예시 결과를 보여드릴게요.", true);
-      render(parseKakao(sampleChat()), true);
-      return;
+      history.replaceState(null, "", location.pathname);
+      showNotice("결과 링크를 열지 못했어요. 링크가 잘렸거나 이 브라우저가 지원하지 않아요.", true);
     }
   }
-  showNotice("아래는 가상의 친구 4명 단톡방으로 만든 예시 결과예요. 내 대화 파일을 올리면 바뀌어요.");
-  render(parseKakao(sampleChat()), true);
+  history.replaceState({ view: "upload" }, "", location.pathname + location.search);
+  go("upload", { push: false });
 }
 start();
 </script>
