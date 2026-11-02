@@ -201,9 +201,9 @@ function verdict(list) {
   }
   const [a, b] = [...list].sort((x, y) => y.affection - x.affection);
   const diff = a.affection - b.affection;
-  if (a.affection >= 65 && diff <= 10) return { title: "서로 진심인 찐친", desc: "선톡도 답장도 막상막하예요." };
-  if (diff > 25) return { title: `${a.name} 님만 열정적`, desc: `${b.name} 님, 답장 좀 빨리 해주세요.` };
-  if (diff > 10) return { title: `${a.name} 님이 조금 더 좋아하는 사이`, desc: "한쪽으로 살짝 기울어 있어요." };
+  if (a.affection >= 65 && diff <= 10) return { title: "티키타카 찰떡 콤비", desc: "선톡도 답장도 막상막하예요." };
+  if (diff > 25) return { title: `${a.name} 님만 열정적`, desc: `${b.name} 님, 답장 좀 해주세요.` };
+  if (diff > 10) return { title: `${a.name} 님이 조금 더 적극적인 사이`, desc: "한쪽으로 살짝 기울어 있어요." };
   return { title: "적당히 편한 사이", desc: "무난하고 평화로운 대화예요." };
 }
 
