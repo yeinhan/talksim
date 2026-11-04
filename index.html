@@ -494,6 +494,8 @@ function sanitizeView(V) {
     byWeekday: fixed(V.byWeekday, 7),
     activeDays: num(V.activeDays), longestStreakDays: num(V.longestStreakDays), conversations: num(V.conversations),
     busiestDays: arr(V.busiestDays, 3).map((d) => ({ day: str(d?.day, 10), count: num(d?.count) })),
+    // 예전 링크에는 없으니 그때 기준이던 6시간으로 본다.
+    gap: Array.isArray(V.gap) ? [Math.max(1, Math.min(12, num(V.gap[0]) || 6)), numOrNull(V.gap[1])] : [6, null],
   };
 }
 
@@ -560,6 +562,7 @@ function buildView(s, isSample) {
     longestStreakDays: s.longestStreakDays,
     conversations: s.conversations,
     busiestDays: s.busiestDays,
+    gap: [s.gap.hours, s.gap.p90Minutes],
   };
 }
 
@@ -588,7 +591,8 @@ function renderView(V, shared) {
     </section>` : ""}
 
     <section class="block">
-      <div class="block-head"><h2>누가 먼저 톡했을까</h2><span class="small muted">6시간 넘게 조용하다 보낸 톡 기준</span></div>
+      <div class="block-head"><h2>누가 먼저 톡했을까</h2><span class="small muted">${V.gap[0]}시간 넘게 조용하다 보낸 톡 기준</span></div>
+      ${V.gap[1] != null ? `<p class="small muted">이 대화는 답장 10번 중 9번이 ${fmtMinutes(V.gap[1])} 안에 와요. 그보다 4배쯤 길게 조용했다가 보낸 톡을 선톡으로 셌어요.</p>` : ""}
       ${bars(people, "starts", (p) => `${p.starts}번`)}
       <div class="pane">
         <p class="small muted">이 대화의 첫 메시지 · ${esc(V.first.date)}</p>
