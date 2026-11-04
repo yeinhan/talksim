@@ -81,11 +81,18 @@ header { display: flex; flex-direction: column; gap: 8px; }
 .drop.ready .up-bar i { background: var(--alt); }
 #up-pct { width: 40px; text-align: right; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
-.me-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-.me-btn { appearance: none; font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-width: 0; }
-.me-btn b { font-family: var(--display); font-weight: 400; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.me-btn.saved { border-color: var(--alt); }
-.me-btn:hover, .me-btn:focus-visible { border-color: var(--accent); outline: none; background: var(--accent-soft); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field input, .name-row input[type=text] { font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
+.field input:focus, .name-row input[type=text]:focus { outline: none; border-color: var(--accent); }
+.name-list { display: flex; flex-direction: column; gap: 8px; }
+.name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.name-row .orig { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-bottom: -4px; }
+.me-pick { display: flex; align-items: center; gap: 4px; font-size: 13px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); cursor: pointer; white-space: nowrap; }
+.me-pick:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.me-pick input { accent-color: var(--accent); margin: 0; }
+.name-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.small-btn { font-size: 14px; padding: 10px; }
+.card .room { font-size: 13px; color: var(--muted); }
 .result-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .result-title button { appearance: none; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; padding: 4px; }
 .btn {
@@ -271,7 +278,7 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
   <ol class="stepper" id="stepper" aria-label="진행 단계">
     <li data-step="upload"><span>1</span>파일</li>
     <li data-step="analyze"><span>2</span>분석</li>
-    <li data-step="me"><span>3</span>나 고르기</li>
+    <li data-step="me"><span>3</span>이름 정하기</li>
     <li data-step="result"><span>4</span>결과</li>
   </ol>
 
@@ -325,11 +332,19 @@ footer { font-size: 12px; color: var(--muted); text-align: center; }
 
   <section class="view" data-view="me" hidden>
     <div>
-      <h2>이 대화에서 누가 나예요?</h2>
-      <p class="muted small">고른 이름은 결과지와 공유 링크에 "○○님의 톡심 결과지"로 표시돼요.</p>
+      <h2>결과지에 보일 이름 정하기</h2>
+      <p class="muted small">친구에게 공유할 결과지에 나올 이름이에요. 별명으로 바꾸거나 가려도 되고, "나"를 고르면 "○○님의 결과지"로 나와요.</p>
     </div>
-    <div class="me-list" id="me-list"></div>
-    <button class="btn ghost" id="me-skip" type="button">이름 없이 결과 보기</button>
+    <label class="field" id="room-field" hidden>
+      <span class="small">단톡방 이름</span>
+      <input id="room-name" type="text" maxlength="30" placeholder="예: 고딩 친구들" autocomplete="off">
+    </label>
+    <div class="name-list" id="name-list"></div>
+    <div class="name-tools">
+      <button class="btn ghost small-btn" id="mask-all" type="button">나 빼고 이름 가리기</button>
+      <button class="btn ghost small-btn" id="reset-names" type="button">원래 이름으로</button>
+    </div>
+    <button class="btn" id="names-done" type="button">결과 보기</button>
   </section>
 
   <section class="view" data-view="result" hidden>
@@ -400,6 +415,7 @@ function cardHTML(c) {
   return `<div class="card" id="card">
       <span class="tag">${esc(c.tag)}</span>
       <div>
+        ${c.room ? `<span class="room">${esc(c.room)}</span>` : ""}
         <h2 class="verdict">${esc(c.vt)}</h2>
         <p class="muted">${esc(c.vd)}</p>
       </div>
@@ -462,7 +478,7 @@ function sanitizeView(V) {
     v: 2,
     owner: str(V.owner, 20),
     card: {
-      tag: str(c.tag), vt: str(c.vt, 60), vd: str(c.vd, 80),
+      tag: str(c.tag), room: str(c.room, 30), vt: str(c.vt, 60), vd: str(c.vd, 80),
       p: arr(c.p, 2).map((p) => [str(p?.[0], 30), Math.max(0, Math.min(100, num(p?.[1])))]),
       st: [str(c.st?.[0], 30), num(c.st?.[1])], fa: [str(c.fa?.[0], 30), numOrNull(c.fa?.[1])], tm: num(c.tm),
       rank: arr(c.rank, 12).map((r) => [str(r?.[0], 30), Math.max(0, Math.min(100, num(r?.[1]))), arr(r?.[2], 9).map((t) => str(t, 20))]),
@@ -485,12 +501,15 @@ function maskName(n) {
   const chars = [...String(n)];
   return chars.length <= 1 ? "*" : chars[0] + "*".repeat(Math.min(chars.length - 1, 3));
 }
-function maskView(V) {
-  const names = [...new Set([...V.people.map((p) => p.name), ...V.card.p.map((p) => p[0]), ...(V.card.rank || []).map((r) => r[0]), ...(V.titles || []).map((t) => t.name), V.card.st[0], V.card.fa[0], V.first.sender])]
-    .filter((n) => n && n !== "-")
-    .sort((a, b) => b.length - a.length);
-  const m = (n) => (names.includes(n) ? maskName(n) : n);
-  const scrub = (t) => names.reduce((acc, n) => acc.split(n).join(maskName(n)), t);
+// rename: 원래 이름 → 바꿀 이름. 이름이 들어간 문구(판정·첫마디 등)도 같이 바꾼다.
+function renameView(V, rename) {
+  const names = Object.keys(rename).filter((n) => n && n !== "-" && rename[n] !== n).sort((a, b) => b.length - a.length);
+  const m = (n) => (names.includes(n) ? rename[n] : n);
+  // 긴 이름부터 자리표시로 바꿨다가 한 번에 되돌려야 "민수"→"민"과 "민"→"수" 같은 겹침이 꼬이지 않는다.
+  const scrub = (t) => {
+    let out = names.reduce((acc, n, i) => acc.split(n).join(`\u0000${i}\u0000`), String(t));
+    return out.replace(/\u0000(\d+)\u0000/g, (_, i) => rename[names[i]]);
+  };
   const c = V.card;
   return {
     ...V,
@@ -503,6 +522,12 @@ function maskView(V) {
       topWords: p.topWords.map((w) => ({ ...w, word: scrub(w.word) })),
     })),
   };
+}
+
+// 단톡방 이름 기본값: 내보내기 파일 첫 줄에서 꺼낸다.
+function roomFromTitle(t) {
+  if (!t) return "";
+  return t.replace(/\s*\(예시\)\s*$/, "").replace(/\s*(님과)?\s*카카오톡 대화.*$/, "").replace(/^KakaoTalk Chats? with\s*/i, "").replace(/^Talk_.*$/, "").replace(/\s+\d+$/, "").trim().slice(0, 30);
 }
 
 // 화면에 그릴 결과 데이터. 링크 공유 시 이 객체가 그대로 담긴다(대화 원문은 없음).
@@ -547,7 +572,7 @@ function renderView(V, shared) {
   $("#result").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
     ${shared ? `<div class="owner-banner"><span class="small">공유받은 결과지</span><h2>${V.owner ? `${esc(V.owner)}님의 톡심 결과지입니다` : "친구가 보낸 톡심 결과지입니다"}</h2></div>`
-      : `<div class="result-title"><h2>${current?.isSample ? "예시 결과지" : V.owner ? `${esc(V.owner)}님의 톡심 결과지` : "톡심 결과지"}</h2>${current?.isSample ? "" : '<button type="button" id="rename">이름 바꾸기</button>'}</div>`}
+      : `<div class="result-title"><h2>${current?.isSample ? "예시 결과지" : V.owner ? `${esc(V.owner)}님의 톡심 결과지` : "톡심 결과지"}</h2>${current?.isSample ? "" : '<button type="button" id="rename">이름 고치기</button>'}</div>`}
     ${cardHTML(V.card)}
     ${shared
       ? '<button class="btn" id="try-mine" type="button">나도 우리 사이 확인하기</button>'
@@ -555,7 +580,7 @@ function renderView(V, shared) {
       <button class="btn ghost" id="save" type="button">결과 카드 저장</button>
       <button class="btn ghost" id="share-result" type="button">결과 링크 공유</button>
     </div>
-    <label class="small muted mask-opt"><input type="checkbox" id="mask-names"> 공유할 때 대화 상대 이름 가리기</label>`}
+`}
 
     ${V.titles && V.titles.length ? `<section class="block">
       <h2>멤버별 칭호</h2>
@@ -638,7 +663,8 @@ function renderView(V, shared) {
   $("#share-result").addEventListener("click", shareResult);
   $("#word").addEventListener("input", (e) => {
     const counts = countWord(current.parsed.messages, e.target.value);
-    const rows = people.map((p) => ({ name: p.name, n: counts[p.name] || 0 }));
+    const orig = current.rawView.people;
+    const rows = people.map((p, i) => ({ name: p.name, n: counts[orig[i]?.name] || 0 }));
     $("#word-result").innerHTML = bars(rows, "n", (p) => `${p.n}번`);
   });
 }
@@ -647,7 +673,7 @@ function render(parsed, isSample, owner = "") {
   const s = computeStats(parsed.messages);
   const view = buildView(s, isSample);
   view.owner = owner;
-  current = { parsed, stats: s, isSample, view, summary: view.card };
+  current = { parsed, stats: s, isSample, view, rawView: view, summary: view.card };
   renderView(view, false);
 }
 
@@ -703,8 +729,7 @@ async function shareSite() {
 async function shareResult() {
   if (!current?.view) return;
   const owner = (current.view.owner || "").slice(0, 20);
-  const base = $("#mask-names")?.checked ? maskView(current.view) : current.view;
-  const V = { ...base, owner };
+  const V = { ...current.view, owner };
   const url = `${SITE_URL}#r=${await encodeView(V)}`;
   const text = owner ? `${owner}님의 톡심 결과지: "${V.card.vt}" 너희도 확인해봐!` : `우리 사이 결과는 "${V.card.vt}" 너희도 확인해봐!`;
   if (navigator.share) {
@@ -910,7 +935,7 @@ $("#analyze").addEventListener("click", async () => {
     await wait(350);
     loaderStep("done");
     await wait(Math.max(250, 1400 - (Date.now() - started)));
-    renderMe();
+    renderNames();
     go("me", { push: false });
     history.replaceState({ view: "me" }, "", location.pathname);
   } catch (err) {
@@ -920,23 +945,50 @@ $("#analyze").addEventListener("click", async () => {
   }
 });
 
-// ---- 3. 누가 나예요? ----
-function renderMe() {
-  let saved = "";
-  try { saved = localStorage.getItem("talksim-owner") || ""; } catch {}
-  $("#me-list").innerHTML = current.stats.people.map((p) => `<button type="button" class="me-btn${p.name === saved ? " saved" : ""}" data-name="${esc(p.name)}"><b>${esc(p.name)}</b><span class="small muted">메시지 ${p.messages.toLocaleString()}개</span></button>`).join("");
+// ---- 3. 이름 정하기 ----
+function renderNames() {
+  let savedMe = "";
+  try { savedMe = localStorage.getItem("talksim-owner") || ""; } catch {}
+  const people = current.rawView.people;
+  const group = people.length >= 3;
+  $("#room-field").hidden = !group;
+  $("#room-name").value = group ? roomFromTitle(current.parsed.title) : "";
+  $("#name-list").innerHTML = people.map((p, i) => `<div class="name-row">
+      <span class="orig">${esc(p.name)} · 메시지 ${p.messages.toLocaleString()}개</span>
+      <input type="text" maxlength="20" data-i="${i}" value="${esc(p.name)}" aria-label="${esc(p.name)} 표시 이름" autocomplete="off">
+      <label class="me-pick"><input type="radio" name="me" value="${i}"${p.name === savedMe ? " checked" : ""}> 나</label>
+    </div>`).join("");
 }
-function chooseOwner(name) {
-  current.view.owner = name;
-  try { if (name) localStorage.setItem("talksim-owner", name); } catch {}
-  renderView(current.view, false);
-  go("result");
-}
-$("#me-list").addEventListener("click", (e) => {
-  const b = e.target.closest(".me-btn");
-  if (b) chooseOwner(b.dataset.name);
+function nameInputs() { return [...document.querySelectorAll("#name-list input[type=text]")]; }
+function meIndex() { const r = document.querySelector("#name-list input[name=me]:checked"); return r ? Number(r.value) : -1; }
+$("#mask-all").addEventListener("click", () => {
+  const me = meIndex();
+  nameInputs().forEach((el, i) => { if (i !== me) el.value = maskName(current.rawView.people[i].name); });
 });
-$("#me-skip").addEventListener("click", () => chooseOwner(""));
+$("#reset-names").addEventListener("click", () => {
+  nameInputs().forEach((el, i) => (el.value = current.rawView.people[i].name));
+});
+$("#names-done").addEventListener("click", () => {
+  const raw = current.rawView;
+  const used = new Set();
+  const rename = {};
+  nameInputs().forEach((el, i) => {
+    const orig = raw.people[i].name;
+    let n = el.value.trim().slice(0, 20) || orig;
+    // 같은 이름 두 개가 되면 구분이 안 되니 번호를 붙인다.
+    for (let k = 2; used.has(n); k++) n = `${(el.value.trim() || orig).slice(0, 17)} ${k}`;
+    used.add(n);
+    rename[orig] = n;
+  });
+  const me = meIndex();
+  const view = renameView(raw, rename);
+  view.owner = me >= 0 ? rename[raw.people[me].name] : "";
+  view.card = { ...view.card, room: $("#room-field").hidden ? "" : $("#room-name").value.trim().slice(0, 30) };
+  current.view = view;
+  try { if (me >= 0) localStorage.setItem("talksim-owner", raw.people[me].name); } catch {}
+  renderView(view, false);
+  go("result");
+});
 
 // ---- 4. 결과 ----
 $("#restart").addEventListener("click", () => {
