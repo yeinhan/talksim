@@ -56,3 +56,24 @@ test("no titles for 1:1", () => {
   const { messages } = parseKakao(chat);
   assert.deepEqual(computeStats(messages).titles, []);
 });
+
+test("conversation gap adapts to the chat's reply rhythm", async () => {
+  const { chooseGapHours, computeStats } = await import("../src/stats.js");
+  const mk = (stepMin, n) => {
+    const out = [];
+    let t = new Date(2026, 0, 1, 9).getTime();
+    for (let i = 0; i < n; i++) {
+      out.push({ time: new Date(t), sender: i % 2 ? "A" : "B", text: "hi", kind: "text" });
+      t += (i % 10 === 9 ? 24 * 60 : stepMin) * 60000;
+    }
+    return out;
+  };
+  // 빠른 대화: 1분 간격이면 기준은 최소값 근처
+  assert.ok(chooseGapHours(mk(1, 200)).hours <= 2);
+  // 느린 대화: 40분 간격이면 기준이 길어진다
+  assert.ok(chooseGapHours(mk(40, 200)).hours >= 3);
+  // 메시지가 적으면 6시간
+  assert.equal(chooseGapHours(mk(1, 5)).hours, 6);
+  // 직접 지정하면 그 값을 쓴다
+  assert.equal(computeStats(mk(1, 200), { newConversationGapHours: 6 }).gap.hours, 6);
+});

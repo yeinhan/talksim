@@ -1,7 +1,7 @@
 // 파싱된 메시지로 재미 통계를 계산한다.
 
 const DEFAULTS = {
-  newConversationGapHours: 6, // 이 시간 이상 조용하다가 보낸 메시지 = 선톡
+  newConversationGapHours: null, // 이 시간 이상 조용하다가 보낸 메시지 = 선톡. null이면 대화마다 자동으로 정한다.
   slowReplyMinutes: 60, // 이보다 늦게 답하면 "읽씹 의심"
 };
 
@@ -34,9 +34,24 @@ function topN(map, n) {
   return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([word, count]) => ({ word, count }));
 }
 
+// 선톡 기준 시간을 대화마다 정한다.
+// 답장 10번 중 9번이 오는 시간(90번째 백분위)의 4배만큼 조용했다면 새 대화로 본다.
+// 너무 짧거나 길지 않게 1~12시간으로 자르고, 기록이 적으면 6시간을 쓴다.
+export function chooseGapHours(messages) {
+  const gaps = [];
+  for (let i = 1; i < messages.length; i++) {
+    if (messages[i].sender !== messages[i - 1].sender) gaps.push((messages[i].time - messages[i - 1].time) / 60000);
+  }
+  if (gaps.length < 20) return { hours: 6, p90Minutes: null };
+  gaps.sort((a, b) => a - b);
+  const p90 = gaps[Math.floor(gaps.length * 0.9)];
+  return { hours: Math.min(12, Math.max(1, Math.round((p90 * 4) / 60))), p90Minutes: Math.round(p90) };
+}
+
 export function computeStats(messages, opts = {}) {
   const o = { ...DEFAULTS, ...opts };
-  const gapMs = o.newConversationGapHours * 3600_000;
+  const gap = o.newConversationGapHours ? { hours: o.newConversationGapHours, p90Minutes: null } : chooseGapHours(messages);
+  const gapMs = gap.hours * 3600_000;
   const people = new Map();
   const person = (name) => {
     if (!people.has(name)) {
@@ -148,6 +163,7 @@ export function computeStats(messages, opts = {}) {
     byHour,
     byWeekday,
     busiestDays,
+    gap,
     longestStreakDays: longestStreak([...byDay.keys()]),
     verdict: verdict(list),
     titles,
